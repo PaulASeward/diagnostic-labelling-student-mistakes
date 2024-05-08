@@ -52,3 +52,69 @@ class TaskSelector:
                 self.df_with_additive_embeddings[f"feedback_additive_embedding_np"] = self.df_with_additive_embeddings['feedback_additive_embedding'].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
 
 
+def select_questions_to_process(feedback_df, selected_courses=None, selected_assignments=None, selected_tasks=None, selected_parts=None):
+    if selected_courses is not None:
+        if all(isinstance(item, (int, np.integer)) for item in selected_courses):
+            feedback_df = feedback_df[feedback_df['course_id'].isin(selected_courses)]
+        else:
+            feedback_df = feedback_df[feedback_df['course_name'].isin(selected_courses)]
+
+    if selected_assignments is not None:
+        if all(isinstance(item, (int, np.integer)) for item in selected_assignments):
+            feedback_df = feedback_df[feedback_df['assignment_id'].isin(selected_assignments)]
+        else:
+            feedback_df = feedback_df[feedback_df['assignment_name'].isin(selected_assignments)]
+
+    if selected_tasks is not None:
+        if all(isinstance(item, (int, np.integer)) for item in selected_tasks):
+            feedback_df = feedback_df[feedback_df['task_id'].isin(selected_tasks)]
+        else:
+            feedback_df = feedback_df[feedback_df['task_title'].isin(selected_tasks)]
+
+    if selected_parts is not None:
+        feedback_df = feedback_df[feedback_df['part_name'].isin(selected_parts)]
+
+    return feedback_df
+
+
+def get_ai_grade(student_grades_group, part_name=None):
+    if part_name is None:
+       return student_grades_group['ai_grade'].iloc[0] if not np.isnan(student_grades_group['ai_grade'].iloc[0]) else 0
+    else:
+        return 0  # Eventually, connect to Grade getion by Part
+
+
+def get_ta_grade(student_grades_group, part_name=None):
+    if part_name is None:
+        return student_grades_group['ta_grade'].iloc[0] if not np.isnan(student_grades_group['ta_grade'].iloc[0]) else 0
+    else:
+        return 0  # Eventually, Connect to Grade getion by Part
+
+
+def get_single_ai_feedback_for_part(student_part_response_group, part_name=None):
+    feedback_data = student_part_response_group['feedback_data'].iloc[0]
+    if pd.isna(feedback_data):
+        return ''
+
+    try:
+        feedback_json = json.loads(feedback_data)
+        if 'feedback' in feedback_json:
+            return feedback_json['feedback']
+        else:
+            return ''
+    except json.JSONDecodeError as e:
+        print(f'Error: {e}')
+        return ''
+
+
+def get_ta_feedback(student_response_group, part_name=None):
+    if part_name is None:
+            feedback = student_response_group['ta_feedback_text'].iloc[0]
+            return str(feedback) if isinstance(feedback, str) or not np.isnan(feedback) else ""
+    else:
+        return ""  # Eventually, Connect to string methods to get ta_feedback on an item if exists
+
+
+def calculate_grade_difference(ai_grade, ta_grade):
+    # Simple comparison of the ai_grade and ta_grade column. If the ta_grade is different, then the differential is positive. If the grade is different, then the differential is negative. No extra work needed.
+    return ta_grade - ai_grade

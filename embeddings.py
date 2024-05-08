@@ -26,6 +26,7 @@ def add_embeddings(feedback_diff):
     else:
         return calculate_embedding(feedback_diff)
 
+
 def get_processed_embeddings(task_df, diff_type_prefix):
     embedding_column = f'feedback_{diff_type_prefix}_embedding'
     filtered_task_df = task_df.dropna(subset=[embedding_column]).reset_index(drop=True)  # Drop rows with no embeddings. If this df is all NaN, then the df will be empty/None
