@@ -4,7 +4,6 @@ from openai_utils.openai_config import OpenAiConfig, OpenAiOptions
 import os
 import openai
 from dotenv import load_dotenv
-from openai_utils.core import ChatModels
 
 
 def load_openai_env():
@@ -12,19 +11,6 @@ def load_openai_env():
     openai.organization = os.environ["OPENAI_ORGANIZATION"]
     openai.api_key = os.environ["OPENAI_API_KEY"]
 
-
-def select_chat_model(model):
-    selected_model = None
-    for enum_member in ChatModels:
-        if enum_member.value == model.value:
-            selected_model = enum_member
-            break
-    return selected_model
-
-
-def display_chat_models():
-    for model in ChatModels:
-        print(f"{model:<25} -> {model.value}")
 
 
 def call_openai(prompt, options: OpenAiOptions):

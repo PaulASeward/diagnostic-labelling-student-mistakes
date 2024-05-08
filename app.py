@@ -108,7 +108,7 @@ app.layout = html.Div([
 )
 def set_assignment_options(selected_course_id):
     task_selector.selections['course'] = selected_course_id
-    return [{'label': name, 'value': id} for id, name in task_selector.assignment_mapping.items() if id in task_selector.df_joined[task_selector.df_joined['course_id'] == selected_course_id]['assignment_id'].unique()]
+    return [{'label': name, 'value': id} for id, name in task_selector.assignment_mapping.items() if id in task_selector.df_feedback[task_selector.df_feedback['course_id'] == selected_course_id]['assignment_id'].unique()]
 
 
 @app.callback(
@@ -117,7 +117,7 @@ def set_assignment_options(selected_course_id):
 )
 def set_task_options(selected_assignment_id):
     task_selector.selections['assignment'] = selected_assignment_id
-    return [{'label': name, 'value': id} for id, name in task_selector.task_mapping.items() if id in task_selector.df_joined[task_selector.df_joined['assignment_id'] == selected_assignment_id]['task_id'].unique()]
+    return [{'label': name, 'value': id} for id, name in task_selector.task_mapping.items() if id in task_selector.df_feedback[task_selector.df_feedback['assignment_id'] == selected_assignment_id]['task_id'].unique()]
 
 
 @app.callback(

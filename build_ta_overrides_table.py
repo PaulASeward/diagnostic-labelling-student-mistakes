@@ -7,7 +7,7 @@ FAULTY_TA_FEEDBACK = ['General', 'Your response has been saved', 'No submission'
 
 
 class AiTaFeedbackJoiner:
-    def __init__(self, ai_feedback_path=AI_FEEDBACK_PATH, ta_feedback_path=TA_OVERRIDES_PATH,
+    def __init__(self, ai_feedback_path=AI_FEEDBACK_PATH, ta_feedback_path=FEEDBACK_PATH,
                  joined_feedback_path=JOINED_FEEDBACK_PATH, feedback_differential_path=FEEDBACK_DIFFERENTIAL_PATH,
                  selected_courses=None, selected_assignments=None, selected_tasks=None, selected_parts=None,
                  build_new=False):
