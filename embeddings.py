@@ -1,4 +1,5 @@
 import numpy as np
+import json
 import ast
 
 import pandas as pd
@@ -18,7 +19,6 @@ def produce_embeddings_for_task(task_csv_path):
 def calculate_embedding(feedback, options=OpenAiOptions(model='text-embedding-ada-002', max_tokens=300)):
     try:
         embedding = generate_embeddings(feedback, options, dimensions=600)
-        print('embedding calculated')
     except Exception as e:
         print(f"An error occurred while generating embeddings: {e}")
         embedding = pd.NA
