@@ -10,7 +10,7 @@ FEEDBACK_PATH = 'data/feedback.csv'
 class TaskSelector:
     def __init__(self, feedback_path=FEEDBACK_PATH):
         self.feedback_path = feedback_path
-        self.df_feedback = pd.read_csv(feedback_path)  # Load the larger DataFrame for mappings
+        self.df_feedback = pd.read_csv(feedback_path)
         self.course_mapping = self._create_mapping('course_id', 'course_name')
         self.assignment_mapping = self._create_mapping('assignment_id', 'assignment_name')
         self.task_mapping = self._create_mapping('task_id', 'task_title')
@@ -21,10 +21,6 @@ class TaskSelector:
         self.df_with_category_embedding = None
         self.feedback_embedding_array = None
         self.category_embedding_array = None
-        # self.df_feedback['feedback_embedding'] = pd.NA
-        # self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
-        # self.df_feedback['category_hint'] = pd.NA
-        # self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
 
         # CHeck if feedback_embedding column exists:
         if 'feedback_embedding' not in self.df_feedback.columns:

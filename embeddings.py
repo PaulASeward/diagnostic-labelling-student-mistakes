@@ -1,19 +1,8 @@
 import numpy as np
-import json
 import ast
-
 import pandas as pd
 from openai_utils.openai_request import *
 from openai_utils.openai_config import OpenAiOptions
-
-
-def produce_embeddings_for_task(task_csv_path):
-    task_df = pd.read_csv(task_csv_path)
-    task_df['feedback_additive_embedding'] = task_df['feedback_additive_differential'].apply(calculate_embedding)
-    task_df['feedback_subtractive_embedding'] = task_df['feedback_subtractive_differential'].apply(calculate_embedding)
-
-    task_df.to_csv(task_csv_path, index=False)
-    return task_df
 
 
 def calculate_embedding(feedback, options=OpenAiOptions(model='text-embedding-ada-002', max_tokens=300)):
