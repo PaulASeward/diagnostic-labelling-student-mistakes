@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from clustering_utils import *
 from embeddings import *
 from tqdm import tqdm
 from dimension_reduction import project_embeddings_to_reduced_dimension
@@ -45,16 +46,19 @@ class TaskSelector:
                                             (self.df_feedback['assignment_id'] == self.selections['assignment']) &
                                             (self.df_feedback['task_id'].isin(self.selections['tasks']))]
 
+            self.on_embedding_request('ta_feedback_text')
+            self.on_embedding_request('category_hint')
+            self.on_category_hint_generation()
+            self.on_clustering_request()
+            self.on_dim_reduction_request()
+
             return self.selected_df
         return None
 
-    def on_dim_reduction_request(self):
+    def on_clustering_request(self):
         if not self.selected_df.empty:
-            df_with_feedback_embedding, self.feedback_embedding_array = get_processed_embeddings(self.selected_df, 'feedback_embedding')
-            df_with_category_embedding, self.category_embedding_array = get_processed_embeddings(self.selected_df, 'category_embedding')
-
-            self.df_with_feedback_embedding = project_embeddings_to_reduced_dimension(df_with_feedback_embedding, self.feedback_embedding_array, 'feedback', self.dimension_reduction_technique)
-            self.df_with_category_embedding = project_embeddings_to_reduced_dimension(df_with_category_embedding, self.category_embedding_array, 'category', self.dimension_reduction_technique)
+            self.selected_df = cluster_student_mistakes_kmeans(self.selected_df, embedding_type_prefix='feedback')
+            self.selected_df = cluster_student_mistakes_kmeans(self.selected_df, embedding_type_prefix='category')
 
     def on_embedding_request(self, text_to_process):
         embedding_column = 'feedback_embedding' if text_to_process == 'ta_feedback_text' else 'category_embedding'
@@ -106,15 +110,23 @@ class TaskSelector:
 
             return self.selected_df
 
+    def on_dim_reduction_request(self):
+        if not self.selected_df.empty:
+            filtered_df_with_feedback_embedding, self.feedback_embedding_array = get_processed_embeddings(self.selected_df, 'feedback_embedding')
+            filtered_df_with_category_embedding, self.category_embedding_array = get_processed_embeddings(self.selected_df, 'category_embedding')
+
+            self.df_with_feedback_embedding = project_embeddings_to_reduced_dimension(filtered_df_with_feedback_embedding, self.feedback_embedding_array, 'feedback', self.dimension_reduction_technique)
+            self.df_with_category_embedding = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, self.category_embedding_array, 'category', self.dimension_reduction_technique)
 
 
+# ts = TaskSelector()
+# ts.selections['course'] = 877
+# ts.selections['assignment'] = 1302
+# ts.selections['tasks'] = [691]
+# ts.on_task_selection()
 
-ts = TaskSelector()
-ts.selections['course'] = 877
-ts.selections['assignment'] = 1302
-ts.selections['tasks'] = [691]
-ts.on_task_selection()
-
+# ts.on_dim_reduction_request()
+# ts.on_clustering_request()
 # ts.on_category_hint_generation()
 # # ts.on_embedding_request('ta_feedback_text')
 # ts.on_embedding_request('category_hint')

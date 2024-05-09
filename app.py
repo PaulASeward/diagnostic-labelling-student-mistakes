@@ -79,16 +79,15 @@ def update_wholeclass_dashboard(n_clicks, selected_course, selected_assignment, 
                 task_selector.on_task_selection()
 
                 fig1 = None
-                if not task_selector.selected_df.empty:
-                    # fig1 = build_scatter_plot(df=task_selector.selected_df)
-                    x=1
+                if not task_selector.df_with_category_embedding.empty:
+                    fig1 = build_scatter_plot_with_mistake_category_trace(task_embeddings_df=task_selector.df_with_category_embedding, embedding_type_prefix='category')
 
                 if fig1 is None:
                     fig1 = go.Figure()
 
-                return fig1
+                return [fig1]
 
-    return dash.no_update
+    return [dash.no_update]
 
 
 
