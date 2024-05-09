@@ -18,6 +18,8 @@ class TaskSelector:
         self.selected_df = None
         # self.df_feedback['feedback_embedding'] = pd.NA
         # self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
+        # self.df_feedback['category_hint'] = pd.NA
+        # self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
 
         # CHeck if feedback_embedding column exists:
         if 'feedback_embedding' not in self.df_feedback.columns:
@@ -45,9 +47,11 @@ class TaskSelector:
             return self.selected_df
         return None
 
-    def on_feedback_embedding_request(self):
+    def on_embedding_request(self, text_to_process):
+        embedding_column = 'feedback_embedding' if text_to_process == 'ta_feedback_text' else 'category_embedding'
+
         if not self.selected_df.empty:
-            missing_embeddings = self.selected_df['feedback_embedding'].isna()
+            missing_embeddings = self.selected_df[embedding_column].isna()
             if missing_embeddings.any():
                 try:
                     load_openai_env()
@@ -56,8 +60,8 @@ class TaskSelector:
                     batch_size = 3
                     for i in tqdm(range(0, len(indices_to_update), batch_size)):
                         batch_indices = indices_to_update[i:i + batch_size]
-                        new_embeddings = self.selected_df.loc[batch_indices, 'ta_feedback_text'].apply(add_embeddings)
-                        self.df_feedback.loc[batch_indices, 'feedback_embedding'] = new_embeddings
+                        new_embeddings = self.selected_df.loc[batch_indices, text_to_process].apply(calculate_embedding)
+                        self.df_feedback.loc[batch_indices, embedding_column] = new_embeddings
 
                         # Incrementally update the embeddings in the main DataFrame
                         self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
@@ -73,11 +77,23 @@ class TaskSelector:
         if not self.selected_df.empty:
             missing_category_hint = self.selected_df['category_hint'].isna()
             if missing_category_hint.any():
-                load_openai_env()
-                self.df_feedback.loc[self.selected_df.index[missing_category_hint], 'category_hint'] = self.selected_df.loc[missing_category_hint, 'ta_feedback_text'].apply(add_category_hint)
+                try:
+                    load_openai_env()
+                    indices_to_update = self.selected_df.index[missing_category_hint]
 
-                # Save the updated DataFrame
-                self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
+                    batch_size = 3
+                    for i in tqdm(range(0, len(indices_to_update), batch_size)):
+                        batch_indices = indices_to_update[i:i + batch_size]
+                        new_category_hints = self.selected_df.loc[batch_indices, 'ta_feedback_text'].apply(add_category_hint)
+                        self.df_feedback.loc[batch_indices, 'category_hint'] = new_category_hints
+
+                        # Incrementally update the embeddings in the main DataFrame
+                        self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
+                        continue
+
+                except Exception as e:
+                    print(f"An error occurred while generating category hints: {e}")
+                    return None
 
             return self.selected_df
 
@@ -88,8 +104,9 @@ ts = TaskSelector()
 ts.selections['course'] = 877
 ts.selections['assignment'] = 1302
 ts.selections['tasks'] = [691]
-
-
 ts.on_task_selection()
-# ts.on_feedback_embedding_request()
-ts.on_category_hint_generation()
+
+
+# # ts.on_embedding_request('ta_feedback_text')
+# ts.on_category_hint_generation()
+ts.on_embedding_request('category_hint')

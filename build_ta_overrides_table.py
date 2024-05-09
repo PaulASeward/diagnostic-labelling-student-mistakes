@@ -1,6 +1,6 @@
 import re
 from select_utils import *
-from embeddings import add_embeddings
+from embeddings import calculate_embedding
 
 FAULTY_TA_FEEDBACK = ['General', 'Your response has been saved', 'No submission',
                       'No Feedback was given by your instructor']
@@ -109,7 +109,7 @@ class AiTaFeedbackJoiner:
                            'ta_id': student_response_group['ta_id'].iloc[0],
                            'ta_name': f"{student_response_group['ta_first_name'].iloc[0]} {student_response_group['ta_last_name'].iloc[0]}"}
 
-                new_row = add_embeddings_if_needed(self.feedback_differential_path, new_row, existing_data_exists)
+                new_row = calculate_embedding_if_needed(self.feedback_differential_path, new_row, existing_data_exists)
 
                 pd.DataFrame([new_row]).to_csv(self.feedback_differential_path, mode=mode, header=header, index=False)
                 mode = 'a'
@@ -125,7 +125,7 @@ class AiTaFeedbackJoiner:
         #     combined_data.to_csv(self.feedback_differential_path, index=False)
 
 
-def add_embeddings_if_needed(existing_data_path, new_data_row, existing_data_exists):
+def calculate_embedding_if_needed(existing_data_path, new_data_row, existing_data_exists):
     if existing_data_exists:
         existing_data = pd.read_csv(existing_data_path)
         existing_row = existing_data[
@@ -141,8 +141,8 @@ def add_embeddings_if_needed(existing_data_path, new_data_row, existing_data_exi
 
             return new_data_row
     else:   # If a matching row is found, use its embeddings
-        new_data_row['feedback_additive_embedding'] = add_embeddings(new_data_row['feedback_additive_differential'])
-        new_data_row['feedback_subtractive_embedding'] = add_embeddings(new_data_row['feedback_subtractive_differential'])
+        new_data_row['feedback_additive_embedding'] = calculate_embedding(new_data_row['feedback_additive_differential'])
+        new_data_row['feedback_subtractive_embedding'] = calculate_embedding(new_data_row['feedback_subtractive_differential'])
     return new_data_row
 
 

@@ -1,5 +1,5 @@
 CATEGORY_HINT_PROMPT = (
-    "Given this feedback given to a student, return a (1-4 word max) diagnostic label to categorize the student's mistake for future analytical purposes."
+    "Given this feedback given to a student, return a comma separated list of diagnostic labels (1-4 word max) to categorize the student's mistakes for future analytical purposes, with the most important mistakes first. List MUST BE OF MAX 3, and can be only 1 or 2 items. Return the string, 'None' if student made no actual mistakes."
 )
 
 
