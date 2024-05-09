@@ -63,9 +63,9 @@ def reduce_dimensionality(embedding_df, reduction_technique: ReductionTechnique,
     return reduced_embedding_df
 
 
-def project_embeddings_to_reduced_dimension(task_df, embedding_array, diff_type_prefix, technique='PCA', reduced_dimensions=2):
+def project_embeddings_to_reduced_dimension(task_df, embedding_array, embedding_type_prefix, technique='PCA', reduced_dimensions=2):
     if embedding_array is not None:
         reduced_embeddings = reduce_dimensionality(embedding_array, reduction_technique=ReductionTechnique(method=technique, n_components=reduced_dimensions))
         for i in range(reduced_dimensions):
-            task_df[f'reduced_{diff_type_prefix}_embedding_{i+1}'] = reduced_embeddings[:, i].tolist()
+            task_df[f'reduced_{embedding_type_prefix}_embedding_{i+1}'] = reduced_embeddings[:, i].tolist()
     return task_df

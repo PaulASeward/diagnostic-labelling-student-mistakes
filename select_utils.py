@@ -16,6 +16,11 @@ class TaskSelector:
         self.task_mapping = self._create_mapping('task_id', 'task_title')
         self.selections = {'course': None, 'assignment': None, 'tasks': []}
         self.selected_df = None
+        self.dimension_reduction_technique = 'PCA'
+        self.df_with_feedback_embedding = None
+        self.df_with_category_embedding = None
+        self.feedback_embedding_array = None
+        self.category_embedding_array = None
         # self.df_feedback['feedback_embedding'] = pd.NA
         # self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
         # self.df_feedback['category_hint'] = pd.NA
@@ -46,6 +51,14 @@ class TaskSelector:
 
             return self.selected_df
         return None
+
+    def on_dim_reduction_request(self):
+        if not self.selected_df.empty:
+            df_with_feedback_embedding, self.feedback_embedding_array = get_processed_embeddings(self.selected_df, 'feedback_embedding')
+            df_with_category_embedding, self.category_embedding_array = get_processed_embeddings(self.selected_df, 'category_embedding')
+
+            self.df_with_feedback_embedding = project_embeddings_to_reduced_dimension(df_with_feedback_embedding, self.feedback_embedding_array, 'feedback', self.dimension_reduction_technique)
+            self.df_with_category_embedding = project_embeddings_to_reduced_dimension(df_with_category_embedding, self.category_embedding_array, 'category', self.dimension_reduction_technique)
 
     def on_embedding_request(self, text_to_process):
         embedding_column = 'feedback_embedding' if text_to_process == 'ta_feedback_text' else 'category_embedding'
@@ -106,7 +119,6 @@ ts.selections['assignment'] = 1302
 ts.selections['tasks'] = [691]
 ts.on_task_selection()
 
-
-# # ts.on_embedding_request('ta_feedback_text')
 # ts.on_category_hint_generation()
-ts.on_embedding_request('category_hint')
+# # ts.on_embedding_request('ta_feedback_text')
+# ts.on_embedding_request('category_hint')
