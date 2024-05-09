@@ -16,15 +16,27 @@ def produce_embeddings_for_task(task_csv_path):
 
 
 def calculate_embedding(feedback, options=OpenAiOptions(model='text-embedding-ada-002', max_tokens=300)):
-    embedding = generate_embeddings(feedback, options, dimensions=None)
+    try:
+        embedding = generate_embeddings(feedback, options, dimensions=600)
+        print('embedding calculated')
+    except Exception as e:
+        print(f"An error occurred while generating embeddings: {e}")
+        embedding = pd.NA
     return embedding
 
 
-def add_embeddings(feedback_diff):
-    if (isinstance(feedback_diff, str) and feedback_diff == '') or pd.isna(feedback_diff):
+def add_embeddings(feedback):
+    if (isinstance(feedback, str) and feedback == '') or pd.isna(feedback):
         return pd.NA
     else:
-        return calculate_embedding(feedback_diff)
+        return calculate_embedding(feedback)
+
+
+def add_category_hint(feedback):
+    if (isinstance(feedback, str) and feedback == '') or pd.isna(feedback):
+        return pd.NA
+    else:
+        return generate_category_hint(feedback)
 
 
 def get_processed_embeddings(task_df, diff_type_prefix):

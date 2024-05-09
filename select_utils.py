@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from embeddings import get_processed_embeddings, add_embeddings
+from embeddings import *
 from dimension_reduction import project_embeddings_to_reduced_dimension
 
 FEEDBACK_PATH = 'data/feedback.csv'
@@ -26,39 +26,43 @@ class TaskSelector:
         return self.df_feedback[[id_column, title_column]].drop_duplicates().set_index(id_column)[title_column].to_dict()
 
     def on_task_selection(self):
-        selected_course = self.selections['course']
-        selected_assignment = self.selections['assignment']
-        selected_tasks = self.selections['tasks']
+        if self.selections['course'] and self.selections['assignment'] and self.selections['tasks']:
+            self.selected_df = self.df_feedback[(self.df_feedback['course_id'] == self.selections['course']) &
+                                            (self.df_feedback['assignment_id'] == self.selections['assignment']) &
+                                            (self.df_feedback['task_id'].isin(self.selections['tasks']))]
 
-        if selected_course and selected_assignment and selected_tasks:
-            # # Obtain indices of selected tasks
-            # selected_indices = np.indices(self.df_feedback[(self.df_feedback['course_id'] == selected_course) &
-            #                                 (self.df_feedback['assignment_id'] == selected_assignment) &
-            #                                 (self.df_feedback['task_id'].isin(selected_tasks))])
-            #
-            # # Calculate embeddings on rows without feedback embedding:
-            # missing_embedding_rows = np.indices(self.df_feedback[selected_indices]['feedback_embedding'].isna())
-            #
-            # if missing_embedding_rows.size != 0:
-            #     self.df_feedback.loc[missing_embedding_rows, 'feedback_embedding'] = self.df_feedback.loc[missing_embedding_rows, 'feedback'].apply(add_embeddings)
-            #
-            #     # Save the updated DataFrame
-            #     self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
-            #
-            # self.selected_df = self.df_feedback[selected_indices]
+            return self.selected_df
+        return None
 
-            selected_df = self.df_feedback[(self.df_feedback['course_id'] == selected_course) &
-                                            (self.df_feedback['assignment_id'] == selected_assignment) &
-                                            (self.df_feedback['task_id'].isin(selected_tasks))]
-
-            missing_embeddings = selected_df['feedback_embedding'].isna()
+    def on_feedback_embedding_request(self):
+        if not self.selected_df.empty:
+            missing_embeddings = self.selected_df['feedback_embedding'].isna()
             if missing_embeddings.any():
-                self.df_feedback.loc[selected_df.index[missing_embeddings], 'feedback_embedding'] = selected_df.loc[missing_embeddings, 'feedback'].apply(add_embeddings)
+                try:
+                    load_openai_env()
+                    new_embeddings = self.selected_df.loc[missing_embeddings, 'ta_feedback_text'].apply(add_embeddings)
+                    self.df_feedback.loc[self.selected_df.index[missing_embeddings], 'feedback_embedding'] = new_embeddings
+                    # Save the updated DataFrame
+                    self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
+                except Exception as e:
+                    print(f"An error occurred while updating embeddings: {e}")
+                    return None
+
+            return self.selected_df
+
+    def on_category_hint_generation(self):
+        if not self.selected_df.empty:
+            missing_category_hint = self.selected_df['category_hint'].isna()
+            if missing_category_hint.any():
+                load_openai_env()
+                self.df_feedback.loc[self.selected_df.index[missing_category_hint], 'category_hint'] = self.selected_df.loc[missing_category_hint, 'ta_feedback_text'].apply(add_category_hint)
 
                 # Save the updated DataFrame
                 self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
 
-            self.selected_df = selected_df
+            return self.selected_df
+
+
 
 
 ts = TaskSelector()
@@ -68,3 +72,4 @@ ts.selections['tasks'] = [691]
 
 
 ts.on_task_selection()
+ts.on_feedback_embedding_request()
