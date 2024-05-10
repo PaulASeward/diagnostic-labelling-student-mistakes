@@ -1,5 +1,6 @@
 import numpy as np
 import ast
+import re
 import pandas as pd
 from openai_utils.openai_request import *
 from openai_utils.openai_config import OpenAiOptions
@@ -28,6 +29,28 @@ def add_category_hint(feedback):
             print(f"An error occurred while generating category hint: {e}")
             category_hint = pd.NA
         return category_hint
+
+
+def clean_category_hints(category_hints):
+    if (isinstance(category_hints, str) and category_hints == '') or pd.isna(category_hints):
+        return [pd.NA, pd.NA, pd.NA]
+    else:
+        if ',' in category_hints:
+            items = category_hints.split(',')
+        elif '\n' in category_hints:
+            items = category_hints.split('\n')
+        else:
+            # Try splitting by numbered items pattern (e.g., "1. Item1 2. Item2")
+            items = re.split(r'\d+\.\s*', category_hints)
+            items = [item for item in items if item.strip()]
+
+            # Strip whitespace and slice to get at most the first three items
+        selected_items = [item.strip() for item in items[:3]]
+
+        # Ensure there are exactly three items, filling with pd.NA if fewer than three
+        while len(selected_items) < 3:
+            selected_items.append(pd.NA)
+        return selected_items
 
 
 def get_processed_embeddings(task_df, embedding_column):

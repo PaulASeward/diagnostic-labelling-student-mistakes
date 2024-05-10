@@ -18,87 +18,89 @@ class TaskSelector:
         self.selections = {'course': None, 'assignment': None, 'tasks': []}
         self.selected_df = None
         self.dimension_reduction_technique = 'PCA'
-        self.df_with_feedback_embedding = None
-        self.df_with_category_embedding = None
-        self.feedback_embedding_array = None
-        self.category_embedding_array = None
+        self.df_with_category_embeddings = None
+        self.category_embedding_arrays = None
 
-        # CHeck if feedback_embedding column exists:
-        if 'feedback_embedding' not in self.df_feedback.columns:
-            self.df_feedback['feedback_embedding'] = pd.NA
-            self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
+        # columns_to_delete = ['category_embedding', 'category_embedding_1', 'category_embedding_2', 'category_embedding_3']
+        # self.df_feedback.drop(columns=[col for col in columns_to_delete if col in self.df_feedback.columns], inplace=True)
+        # self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
 
-        if 'category_hint' not in self.df_feedback.columns:
-            self.df_feedback['category_hint'] = pd.NA
-            self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
-
-        if 'category_embedding' not in self.df_feedback.columns:
-            self.df_feedback['category_embedding'] = pd.NA
+        columns_to_add = ['category_hints', 'category_hint_1', 'category_hint_1_embedding', 'category_hint_2', 'category_hint_2_embedding', 'category_hint_3', 'category_hint_3_embedding']
+        changes_made = False
+        for column in columns_to_add:
+            if column not in self.df_feedback.columns:
+                self.df_feedback[column] = pd.NA  # Use pd.NA for missing data
+                changes_made = True
+        if changes_made:
             self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
 
     def _create_mapping(self, id_column, title_column):
         """Create a mapping from id to title for dropdown options."""
         return self.df_feedback[[id_column, title_column]].drop_duplicates().set_index(id_column)[title_column].to_dict()
 
+    def calculate_hints_and_categorize(self):
+        self.on_category_hint_generation()
+        self.on_embedding_request()
+        self.on_task_selection()  # Update the selected_df with the new embeddings
+        self.on_clustering_request()
+        self.on_dim_reduction_request()
+
     def on_task_selection(self):
         if self.selections['course'] and self.selections['assignment'] and self.selections['tasks']:
-            self.selected_df = self.df_feedback[(self.df_feedback['course_id'] == self.selections['course']) &
-                                            (self.df_feedback['assignment_id'] == self.selections['assignment']) &
-                                            (self.df_feedback['task_id'].isin(self.selections['tasks']))]
-
-            self.on_embedding_request('ta_feedback_text')
-            self.on_embedding_request('category_hint')
-            self.on_category_hint_generation()
-            self.on_clustering_request()
-            self.on_dim_reduction_request()
-
+            self.selected_df = self.df_feedback[(self.df_feedback['course_id'] == self.selections['course']) & (self.df_feedback['assignment_id'] == self.selections['assignment']) & (self.df_feedback['task_id'].isin(self.selections['tasks']))]
             return self.selected_df
         return None
 
     def on_clustering_request(self):
         if not self.selected_df.empty:
-            self.selected_df = cluster_student_mistakes_kmeans(self.selected_df, embedding_type_prefix='feedback')
-            self.selected_df = cluster_student_mistakes_kmeans(self.selected_df, embedding_type_prefix='category')
+            self.selected_df = cluster_student_mistakes_kmeans(self.selected_df)
 
-    def on_embedding_request(self, text_to_process):
-        embedding_column = 'feedback_embedding' if text_to_process == 'ta_feedback_text' else 'category_embedding'
-
+    def on_embedding_request(self, text_to_process='category_hint'):
         if not self.selected_df.empty:
-            missing_embeddings = self.selected_df[embedding_column].isna()
-            if missing_embeddings.any():
-                try:
-                    load_openai_env()
-                    indices_to_update = self.selected_df.index[missing_embeddings]
 
-                    batch_size = 3
-                    for i in tqdm(range(0, len(indices_to_update), batch_size)):
-                        batch_indices = indices_to_update[i:i + batch_size]
-                        new_embeddings = self.selected_df.loc[batch_indices, text_to_process].apply(calculate_embedding)
-                        self.df_feedback.loc[batch_indices, embedding_column] = new_embeddings
+            for category_hint_idx in range(1, 4):  # Iterate over 3 different category hints
+                text_column = text_to_process + f'_{category_hint_idx}'
+                embedding_column = text_to_process + f'_{category_hint_idx}_embedding'
+                missing_embeddings = self.selected_df[embedding_column].isna()
+                if missing_embeddings.any():
+                    try:
+                        load_openai_env()
+                        indices_to_update = self.selected_df.index[missing_embeddings]
 
-                        # Incrementally update the embeddings in the main DataFrame
-                        self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
-                        continue
+                        batch_size = 3
+                        for i in tqdm(range(0, len(indices_to_update), batch_size)):
+                            batch_indices = indices_to_update[i:i + batch_size]
+                            new_embeddings = self.selected_df.loc[batch_indices, text_column].apply(calculate_embedding)
+                            self.df_feedback.loc[batch_indices, embedding_column] = new_embeddings
 
-                except Exception as e:
-                    print(f"An error occurred while updating embeddings: {e}")
-                    return None
+                            # Incrementally update the embeddings in the main DataFrame
+                            self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
+                            continue
+
+                    except Exception as e:
+                        print(f"An error occurred while updating embeddings: {e}")
+                        return None
 
             return self.selected_df
 
     def on_category_hint_generation(self):
         if not self.selected_df.empty:
-            missing_category_hint = self.selected_df['category_hint'].isna()
+            missing_category_hint = self.selected_df['category_hint_1'].isna()
             if missing_category_hint.any():
                 try:
                     load_openai_env()
                     indices_to_update = self.selected_df.index[missing_category_hint]
 
-                    batch_size = 3
+                    batch_size = 5
                     for i in tqdm(range(0, len(indices_to_update), batch_size)):
                         batch_indices = indices_to_update[i:i + batch_size]
                         new_category_hints = self.selected_df.loc[batch_indices, 'ta_feedback_text'].apply(add_category_hint)
-                        self.df_feedback.loc[batch_indices, 'category_hint'] = new_category_hints
+                        self.df_feedback.loc[batch_indices, 'category_hints'] = new_category_hints
+                        cleaned_hints = new_category_hints.apply(clean_category_hints)
+                        for idx, hints in zip(batch_indices, cleaned_hints):
+                            self.df_feedback.loc[idx, 'category_hint_1'] = hints[0]
+                            self.df_feedback.loc[idx, 'category_hint_2'] = hints[1]
+                            self.df_feedback.loc[idx, 'category_hint_3'] = hints[2]
 
                         # Incrementally update the embeddings in the main DataFrame
                         self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
@@ -112,18 +114,16 @@ class TaskSelector:
 
     def on_dim_reduction_request(self):
         if not self.selected_df.empty:
-            filtered_df_with_feedback_embedding, self.feedback_embedding_array = get_processed_embeddings(self.selected_df, 'feedback_embedding')
-            filtered_df_with_category_embedding, self.category_embedding_array = get_processed_embeddings(self.selected_df, 'category_embedding')
+            filtered_df_with_category_embedding, self.category_embedding_arrays = get_processed_embeddings(self.selected_df, 'category_embedding')
+            self.df_with_category_embeddings = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, self.category_embedding_arrays, 'category', self.dimension_reduction_technique)
 
-            self.df_with_feedback_embedding = project_embeddings_to_reduced_dimension(filtered_df_with_feedback_embedding, self.feedback_embedding_array, 'feedback', self.dimension_reduction_technique)
-            self.df_with_category_embedding = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, self.category_embedding_array, 'category', self.dimension_reduction_technique)
-
-
-# ts = TaskSelector()
-# ts.selections['course'] = 877
-# ts.selections['assignment'] = 1302
-# ts.selections['tasks'] = [691]
-# ts.on_task_selection()
+#
+ts = TaskSelector()
+ts.selections['course'] = 877
+ts.selections['assignment'] = 1302
+ts.selections['tasks'] = [691]
+ts.on_task_selection()
+ts.calculate_hints_and_categorize()
 
 # ts.on_dim_reduction_request()
 # ts.on_clustering_request()
