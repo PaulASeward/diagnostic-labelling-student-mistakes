@@ -135,7 +135,7 @@ class TaskSelector:
                 new_row['category_hint'] = row[f'category_hint_{i}']
                 new_row['category_hint_embedding'] = row[f'category_hint_{i}_embedding']
                 new_row['category_hint_idx'] = i
-                new_row['category_name'] = pd.NA
+                new_row['mistake_category_name'] = pd.NA
                 new_df_rows.append(pd.DataFrame([new_row]))
 
         expanded_df = pd.concat(new_df_rows, ignore_index=True)  # Concatenate all the frames
@@ -145,6 +145,7 @@ class TaskSelector:
         if not self.expanded_df.empty:
             cluster_technique = ClusteringTechnique(self.clustering_technique)
             self.expanded_df = cluster_technique.cluster(self.expanded_df)
+            self.expanded_df = cluster_technique.choose_labels(self.expanded_df)
 
     def on_dim_reduction_request(self):
         if not self.expanded_df.empty:
@@ -152,11 +153,11 @@ class TaskSelector:
             self.df_with_category_embeddings = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, self.category_embedding_array, 'category_hint', self.dimension_reduction_technique)
 
 # #
-# ts = TaskSelector()
-# ts.selections['course'] = 877
-# ts.selections['assignment'] = 1302
-# ts.selections['tasks'] = [691]
-# ts.on_task_selection()
+ts = TaskSelector()
+ts.selections['course'] = 877
+ts.selections['assignment'] = 1302
+ts.selections['tasks'] = [691]
+ts.on_task_selection()
 # ts.calculate_hints_and_categorize()
 
 # ts.on_dim_reduction_request()

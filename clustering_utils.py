@@ -79,6 +79,19 @@ def load_input_data(df, col_name, label_column='mistake_category_label'):
     return input_data.tolist()
 
 
+def calculate_centroid_name(df):
+    try:
+        centroid = np.mean(np.stack(df['category_hint_embedding'].tolist()), axis=0)
+        # Find the closest data point to this centroid
+        closest_idx = df['category_hint_embedding'].apply(
+            lambda x: np.linalg.norm(np.array(x) - centroid)).idxmin()
+        return df.loc[closest_idx, 'category_hint']
+    except Exception as e:
+        print(f"Error computing centroid or finding closest point: {e}")
+        return "Unnamed Cluster"  # Default name if something goes wrong
+
+
+
 class ClusteringTechnique:
     def __init__(self, algorithm, **kwargs):
         self.algorithm = algorithm
@@ -121,10 +134,6 @@ class ClusteringTechnique:
         if self.cluster_name_column not in X.columns:
             X[self.cluster_name_column] = np.nan
 
-        # Calculate the central point of each cluster
-        cluster_centers = X.groupby(self.label_column)['category_hint_embedding'].apply(
-            lambda embeddings: np.mean(np.stack(embeddings), axis=0))
-
         for i, mistake_category_idx in enumerate(X[self.label_column].unique()):
             mistake_category_df = X[X[self.label_column] == mistake_category_idx]
 
@@ -132,15 +141,12 @@ class ClusteringTechnique:
             if not mistake_category_df['category_hint'].mode().empty:
                 mistake_category_name = mistake_category_df['category_hint'].mode()[0]
             else:
-                # Calculate the Euclidean distance to the cluster center
-                center_embedding = cluster_centers.loc[mistake_category_idx]
-                closest_idx = mistake_category_df['category_hint_embedding'].apply(
-                    lambda x: np.linalg.norm(np.array(x) - center_embedding)).idxmin()
-                mistake_category_name = mistake_category_df.loc[closest_idx, 'category_hint']
+                mistake_category_name = calculate_centroid_name(mistake_category_df)
 
             X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = mistake_category_name
 
         return X
+
 
 
 

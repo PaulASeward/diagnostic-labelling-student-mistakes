@@ -22,7 +22,7 @@ def add_traces_by_mistake_category(fig, task_embeddings_df, color_design, embedd
             x=x_values,
             y=y_values,
             mode='markers', marker=dict(color=marker_color, line=dict(width=1, color='DarkSlateGrey')),
-            name=str(mistake_category), text=mistake_category_df[text_column], hoverinfo='text+name'
+            name=mistake_category_df['mistake_category_name'].iloc[0], text=mistake_category_df[text_column], hoverinfo='text+name'
         ))
     return fig
 

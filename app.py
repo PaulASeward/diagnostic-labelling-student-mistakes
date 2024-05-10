@@ -30,32 +30,6 @@ app.layout = html.Div([
             placeholder="Select an assignment"
         )
     ], style={'margin-bottom': '20px'}),
-    # html.Div(style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center', 'flexWrap': 'nowrap',
-    #                 'margin-bottom': '20px'}, children=[
-    #     html.Div([
-    #         dcc.Checklist(
-    #             id='task-checklist',
-    #             options=[],
-    #             value=[]
-    #         )
-    #     ], style={'flexShrink': '1'}),
-    #     html.Div(style={'display': 'flex', 'flexDirection': 'column', 'justifyContent': 'space-between', 'alignItems': 'center','margin-bottom': '20px'}, children=[
-    #         html.Div([
-    #             dcc.Dropdown(
-    #                 id='dimension-reduction-technique',
-    #                 options=available_dimension_reduction_techniques(),
-    #                 placeholder="Select a Dimension Reduction Technique"
-    #             ),
-    #         ], style={'flexShrink': '1', 'minWidth': '0'}),
-    #         html.Div([
-    #             dcc.Dropdown(
-    #                 id='clustering-technique',
-    #                 options=available_clustering_techniques(),
-    #                 placeholder="Select a Clustering Technique"
-    #             ),
-    #         ], style={'flexShrink': '1', 'minWidth': '0'})
-    #     ]),
-    # ]),
     html.Div(
         style={
             'display': 'flex',
