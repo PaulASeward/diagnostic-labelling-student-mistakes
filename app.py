@@ -29,13 +29,24 @@ app.layout = html.Div([
             placeholder="Select an assignment"
         )
     ], style={'margin-bottom': '20px'}),
-    html.Div([
-        dcc.Checklist(
-            id='task-checklist',
-            options=[],
-            value=[]
-        )
-    ], style={'margin-bottom': '20px'}),
+    html.Div(style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center', 'flexWrap': 'nowrap',
+                    'margin-bottom': '20px'}, children=[
+        html.Div([
+            dcc.Checklist(
+                id='task-checklist',
+                options=[],
+                value=[]
+            )
+        ], style={'flexShrink': '1'}),
+        html.Div([
+            dcc.Dropdown(
+                id='dimension-reduction-technique',
+                options=available_techniques(),
+                placeholder="Select a Dimension Reduction Technique"
+            ),
+            html.P("Dimension Reduction Technique", style={'textAlign': 'center'})
+        ], style={'flexShrink': '1', 'minWidth': '0', 'width': '50%'})
+    ]),
     html.Button('Generate', id='generate-button', n_clicks=0),
     html.Div([
         dcc.Graph(id='scatter-plot')
@@ -63,12 +74,13 @@ def set_task_options(selected_assignment_id):
 
 @app.callback(
     [Output('scatter-plot', 'figure')],
-    [Input('generate-button', 'n_clicks')],
+    [Input('generate-button', 'n_clicks'),
+     Input('dimension-reduction-technique', 'value'),],
     [State('course-dropdown', 'value'),
      State('assignment-dropdown', 'value'),
      State('task-checklist', 'value')]
 )
-def update_wholeclass_dashboard(n_clicks, selected_course, selected_assignment, selected_tasks):
+def update_wholeclass_dashboard(n_clicks, dimension_reduction_technique, selected_course, selected_assignment, selected_tasks):
     triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
 
     if triggered_id == 'generate-button':
@@ -79,13 +91,16 @@ def update_wholeclass_dashboard(n_clicks, selected_course, selected_assignment, 
                 task_selector.on_task_selection()
 
                 fig1 = None
-                if not task_selector.df_with_category_embedding.empty:
-                    fig1 = build_scatter_plot_with_mistake_category_trace(task_embeddings_df=task_selector.df_with_category_embedding, embedding_type_prefix='category')
+                if not task_selector.df_with_category_embeddings.empty:
+                    fig1 = build_scatter_plot_with_mistake_category_trace(task_embeddings_df=task_selector.df_with_category_embeddings, embedding_type_prefix='category_hint')
 
                 if fig1 is None:
                     fig1 = go.Figure()
 
                 return [fig1]
+    elif triggered_id == 'dimension-reduction-technique':
+        task_selector.on_dimension_reduction_selection(dimension_reduction_technique)
+        return [dash.no_update]
 
     return [dash.no_update]
 

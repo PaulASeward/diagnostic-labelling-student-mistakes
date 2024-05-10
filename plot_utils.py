@@ -9,11 +9,11 @@ def get_color_for_category(index, color_palette=px.colors.qualitative.Plotly):
 
 
 def add_traces_by_mistake_category(fig, task_embeddings_df, color_design, embedding_type_prefix, jitter):
-    mistake_label_column = f'mistake_category_index_from_{embedding_type_prefix}_embedding'
+    mistake_label_column = "mistake_category_label"
     for i, mistake_category in enumerate(task_embeddings_df[mistake_label_column].unique()):
         mistake_category_df = task_embeddings_df[task_embeddings_df[mistake_label_column] == mistake_category]
         marker_color = get_color_for_category(i, color_design)  # Get color for TA
-        text_column = "ta_feedback_text" if embedding_type_prefix == 'feedback' else "category_hint"
+        text_column = "category_hint"
 
         x_values = mistake_category_df[f'reduced_{embedding_type_prefix}_embedding_1'] + (np.random.rand(len(mistake_category_df)) - 0.5) * jitter * (task_embeddings_df[f'reduced_{embedding_type_prefix}_embedding_1'].max() - task_embeddings_df[f'reduced_{embedding_type_prefix}_embedding_1'].min())
         y_values = mistake_category_df[f'reduced_{embedding_type_prefix}_embedding_2'] + (np.random.rand(len(mistake_category_df)) - 0.5) * jitter * (task_embeddings_df[f'reduced_{embedding_type_prefix}_embedding_2'].max() - task_embeddings_df[f'reduced_{embedding_type_prefix}_embedding_2'].min())

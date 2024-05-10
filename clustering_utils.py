@@ -7,6 +7,22 @@ import ast
 from sklearn.preprocessing import StandardScaler
 
 
+def available_clustering_techniques():
+    """
+    Return a list of available dimensionality reduction techniques
+    as options for a Dash dropdown component.
+
+    Returns:
+    A list of dictionaries, where each dictionary has 'label' and 'value' keys.
+    """
+    techniques = {
+        'KMeans': 'KMeans - K-Means Clustering using Euclidean distance',
+        'DBSCAN': 'DBSCAN - Density-Based Spatial Clustering of Applications with Noise',
+    }
+    return [{'label': value, 'value': key} for key, value in techniques.items()]
+
+
+
 def cluster_student_mistakes_kmeans(df):
     label_column = f'mistake_category_label'
     if label_column not in df.columns:
