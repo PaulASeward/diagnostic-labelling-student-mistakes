@@ -40,3 +40,41 @@ def build_scatter_plot_with_mistake_category_trace(task_embeddings_df, embedding
                       legend=dict(# x=1.1,# y=0.5,# xanchor='right',# yanchor='middle',# orientation='v',
                           title=dict(text='Mistake Category', side='top')),)
     return fig
+
+
+def plot_mistake_statistics(df, category_col='mistake_category_name'):
+    """
+    Creates a pie chart and a bar chart figure showing the distribution of student mistakes by category.
+
+    Parameters:
+        df (pd.DataFrame): DataFrame containing the mistake categories and their counts.
+        category_col (str): Column name for the mistake categories.
+
+    Returns:
+        tuple: A tuple containing the pie chart figure and the bar chart figure.
+    """
+    # Data preparation: Ensure the DataFrame contains the expected columns and data types
+    if category_col not in df.columns:
+        raise ValueError(f"The DataFrame must contain the column '{category_col}'.")
+
+    # Count the occurrences of each category
+    df_count = df.groupby(category_col).size().reset_index(name='count')
+
+    # Create a consistent color mapping
+    colors = px.colors.qualitative.Plotly
+    color_discrete_map = {category: colors[i % len(colors)] for i, category in enumerate(df_count[category_col])}
+
+    # Generate Pie Chart
+    pie_fig = px.pie(df_count, names=category_col, values='count', title='Distribution of Student Mistakes (Pie Chart)',
+                     color_discrete_map=color_discrete_map)
+    pie_fig.update_traces(textposition='inside', textinfo='percent+label')
+    pie_fig.update_layout(width=1000, height=1000)
+
+    # Generate Bar Chart
+    bar_fig = px.bar(df_count, x=category_col, y='count', title='Distribution of Student Mistakes (Bar Chart)',
+                     color=category_col, text='count', color_discrete_map=color_discrete_map)
+    bar_fig.update_traces(texttemplate='%{text}', textposition='outside')
+    bar_fig.update_layout(xaxis_title='Mistake Category', yaxis_title='Frequency',
+                          uniformtext_minsize=8, uniformtext_mode='hide', width=1200, height=800)
+
+    return pie_fig, bar_fig

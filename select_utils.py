@@ -41,9 +41,7 @@ class TaskSelector:
         """Create a mapping from id to title for dropdown options."""
         return self.df_feedback[[id_column, title_column]].drop_duplicates().set_index(id_column)[title_column].to_dict()
 
-    def calculate_hints_and_categorize(self):
-        self.on_category_hint_generation()
-        self.on_embedding_request()
+    def cluster_and_categorize(self):
         self.expand_df()
         self.on_clustering_request()
         self.on_dim_reduction_request()
@@ -61,16 +59,12 @@ class TaskSelector:
 
             self.on_category_hint_generation()
             self.on_embedding_request()
-            self.expand_df()
-            self.on_clustering_request()
-            self.on_dim_reduction_request()
-            return self.df_with_category_embeddings
 
         return None
 
     def on_category_hint_generation(self):
         if not self.selected_df.empty:
-            missing_category_hint = self.selected_df['category_hint_1'].isna()
+            missing_category_hint = self.selected_df['category_hints'].isna()
             if missing_category_hint.any():
                 try:
                     load_openai_env()
@@ -110,7 +104,7 @@ class TaskSelector:
                         load_openai_env()
                         indices_to_update = self.selected_df.index[missing_embeddings]
 
-                        batch_size = 3
+                        batch_size = 5
                         for i in tqdm(range(0, len(indices_to_update), batch_size)):
                             batch_indices = indices_to_update[i:i + batch_size]
                             new_embeddings = self.selected_df.loc[batch_indices, text_column].apply(calculate_embedding)
@@ -158,9 +152,9 @@ class TaskSelector:
             self.df_with_category_embeddings = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, self.category_embedding_array, 'category_hint', self.dimension_reduction_technique)
 
 
-ts = TaskSelector()
-ts.selections['course'] = 877
-ts.selections['assignment'] = 1307
-ts.selections['tasks'] = [1153]
-ts.on_task_selection()
+# ts = TaskSelector()
+# ts.selections['course'] = 877
+# ts.selections['assignment'] = 1307
+# ts.selections['tasks'] = [1153]
+# ts.on_task_selection()
 
