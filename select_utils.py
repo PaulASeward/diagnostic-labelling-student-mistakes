@@ -18,6 +18,7 @@ class TaskSelector:
         self.selections = {'course': None, 'assignment': None, 'tasks': []}
         self.selected_df = None
         self.expanded_df = None
+        self.clustering_technique = 'KMeans'
         self.dimension_reduction_technique = 'PCA'
         self.df_with_category_embeddings = None
         self.category_embedding_array = None
@@ -49,6 +50,9 @@ class TaskSelector:
 
     def on_dimension_reduction_selection(self, reduction_technique):
         self.dimension_reduction_technique = reduction_technique
+
+    def on_clustering_technique_selection(self, clustering_technique):
+        self.clustering_technique = clustering_technique
 
     def on_task_selection(self):
         if self.selections['course'] and self.selections['assignment'] and self.selections['tasks']:
@@ -131,6 +135,7 @@ class TaskSelector:
                 new_row['category_hint'] = row[f'category_hint_{i}']
                 new_row['category_hint_embedding'] = row[f'category_hint_{i}_embedding']
                 new_row['category_hint_idx'] = i
+                new_row['category_name'] = pd.NA
                 new_df_rows.append(pd.DataFrame([new_row]))
 
         expanded_df = pd.concat(new_df_rows, ignore_index=True)  # Concatenate all the frames
@@ -138,7 +143,8 @@ class TaskSelector:
 
     def on_clustering_request(self):
         if not self.expanded_df.empty:
-            self.expanded_df = cluster_student_mistakes_kmeans(self.expanded_df)
+            cluster_technique = ClusteringTechnique(self.clustering_technique)
+            self.expanded_df = cluster_technique.cluster(self.expanded_df)
 
     def on_dim_reduction_request(self):
         if not self.expanded_df.empty:

@@ -4,7 +4,8 @@ from dash import callback_context, dash_table
 from dash.exceptions import PreventUpdate
 
 from select_utils import TaskSelector
-from dimension_reduction import available_techniques
+from dimension_reduction import available_dimension_reduction_techniques
+from clustering_utils import available_clustering_techniques
 from plot_utils import *
 
 # Initialize the Dash app
@@ -29,24 +30,77 @@ app.layout = html.Div([
             placeholder="Select an assignment"
         )
     ], style={'margin-bottom': '20px'}),
-    html.Div(style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center', 'flexWrap': 'nowrap',
-                    'margin-bottom': '20px'}, children=[
-        html.Div([
-            dcc.Checklist(
-                id='task-checklist',
-                options=[],
-                value=[]
-            )
-        ], style={'flexShrink': '1'}),
-        html.Div([
-            dcc.Dropdown(
-                id='dimension-reduction-technique',
-                options=available_techniques(),
-                placeholder="Select a Dimension Reduction Technique"
+    # html.Div(style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center', 'flexWrap': 'nowrap',
+    #                 'margin-bottom': '20px'}, children=[
+    #     html.Div([
+    #         dcc.Checklist(
+    #             id='task-checklist',
+    #             options=[],
+    #             value=[]
+    #         )
+    #     ], style={'flexShrink': '1'}),
+    #     html.Div(style={'display': 'flex', 'flexDirection': 'column', 'justifyContent': 'space-between', 'alignItems': 'center','margin-bottom': '20px'}, children=[
+    #         html.Div([
+    #             dcc.Dropdown(
+    #                 id='dimension-reduction-technique',
+    #                 options=available_dimension_reduction_techniques(),
+    #                 placeholder="Select a Dimension Reduction Technique"
+    #             ),
+    #         ], style={'flexShrink': '1', 'minWidth': '0'}),
+    #         html.Div([
+    #             dcc.Dropdown(
+    #                 id='clustering-technique',
+    #                 options=available_clustering_techniques(),
+    #                 placeholder="Select a Clustering Technique"
+    #             ),
+    #         ], style={'flexShrink': '1', 'minWidth': '0'})
+    #     ]),
+    # ]),
+    html.Div(
+        style={
+            'display': 'flex',
+            'justifyContent': 'space-between',
+            'alignItems': 'center',
+            'flexWrap': 'nowrap',
+            'margin-bottom': '20px'
+        },
+        children=[
+            html.Div([
+                dcc.Checklist(
+                    id='task-checklist',
+                    options=[],
+                    value=[]
+                )
+            ], style={'flexGrow': '1', 'flexBasis': '50%'}),
+            html.Div(
+                style={
+                    'display': 'flex',
+                    'flexDirection': 'column',
+                    'justifyContent': 'space-between',
+                    'alignItems': 'center',
+                    'margin-bottom': '20px',
+                    'flexGrow': '1',
+                    'flexBasis': '50%'
+                },
+                children=[
+                    html.Div([
+                        dcc.Dropdown(
+                            id='dimension-reduction-technique',
+                            options=available_dimension_reduction_techniques(),
+                            placeholder="Select a Dimension Reduction Technique"
+                        ),
+                    ], style={'flexShrink': '1', 'minWidth': '0', 'width': '100%'}),
+                    html.Div([
+                        dcc.Dropdown(
+                            id='clustering-technique',
+                            options=available_clustering_techniques(),
+                            placeholder="Select a Clustering Technique"
+                        ),
+                    ], style={'flexShrink': '1', 'minWidth': '0', 'width': '100%'})
+                ]
             ),
-            html.P("Dimension Reduction Technique", style={'textAlign': 'center'})
-        ], style={'flexShrink': '1', 'minWidth': '0', 'width': '50%'})
-    ]),
+        ]
+    ),
     html.Button('Generate', id='generate-button', n_clicks=0),
     html.Div([
         dcc.Graph(id='scatter-plot')
@@ -75,12 +129,13 @@ def set_task_options(selected_assignment_id):
 @app.callback(
     [Output('scatter-plot', 'figure')],
     [Input('generate-button', 'n_clicks'),
-     Input('dimension-reduction-technique', 'value'),],
+     Input('dimension-reduction-technique', 'value'),
+     Input('clustering-technique', 'value'),],
     [State('course-dropdown', 'value'),
      State('assignment-dropdown', 'value'),
      State('task-checklist', 'value')]
 )
-def update_wholeclass_dashboard(n_clicks, dimension_reduction_technique, selected_course, selected_assignment, selected_tasks):
+def update_wholeclass_dashboard(n_clicks, dimension_reduction_technique, clustering_technique, selected_course, selected_assignment, selected_tasks):
     triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
 
     if triggered_id == 'generate-button':
@@ -101,9 +156,12 @@ def update_wholeclass_dashboard(n_clicks, dimension_reduction_technique, selecte
     elif triggered_id == 'dimension-reduction-technique':
         task_selector.on_dimension_reduction_selection(dimension_reduction_technique)
         return [dash.no_update]
+    elif triggered_id == 'clustering-technique':
+        task_selector.on_clustering_technique_selection(clustering_technique)
+        return [dash.no_update]
+
 
     return [dash.no_update]
-
 
 
 if __name__ == '__main__':

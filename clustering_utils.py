@@ -22,160 +22,128 @@ def available_clustering_techniques():
     return [{'label': value, 'value': key} for key, value in techniques.items()]
 
 
+def scale_data_to_array(data):
+    """
+    Scale the given data which should be in the form of a list of lists (or arrays).
 
-def cluster_student_mistakes_kmeans(df):
-    label_column = f'mistake_category_label'
+    Parameters:
+        data (list of lists): Data to be scaled.
+
+    Returns:
+        ndarray: Scaled data as a numpy array.
+    """
+    scaler = StandardScaler()
+    try:
+        data_array = np.array(data)
+        data_scaled = scaler.fit_transform(data_array)
+    except Exception as e:
+        print(f"Error during scaling: {e}")
+        return None
+
+    return data_scaled
+
+
+def load_input_data(df, col_name, label_column='mistake_category_label'):
+    """
+    Load and preprocess the input data from a specified column.
+
+    Parameters:
+        df (pd.DataFrame): The DataFrame containing the data.
+        col_name (str): The name of the column containing input data to be processed.
+        label_column (str): The name of the label column to be added/checked.
+
+    Returns:
+        list: A list of processed data suitable for clustering, or the original DataFrame in case of an error.
+    """
     if label_column not in df.columns:
-        df.loc[:, label_column] = pd.NA
+        df[label_column] = pd.NA
 
-        # Safely accessing and converting input data
-    input_data = df.get('category_hint_embedding')
+    input_data = df[col_name]
     if input_data is None or input_data.empty:
-        print("Input data is missing or empty.")
+        print(f"Input data is missing or empty from column: {col_name}")
         return df
 
-    # Convert from string to lists if necessary
+    # Convert from string representations to lists if necessary
     if isinstance(input_data.iloc[0], str):
         try:
-            input_data = input_data.apply(ast.literal_eval).tolist()
+            input_data = input_data.apply(ast.literal_eval)
         except ValueError as e:
-            print(f"Error converting input data from string: {e}")
+            print(f"Error converting input data from string in column {col_name}: {e}")
             return df
-    else:
-        input_data = input_data.tolist()
 
-    scaler = StandardScaler()
-
-    try:
-        input_data_scaled = scaler.fit_transform(input_data)
-    except Exception as e:
-        print(f"Error during scaling: {e}")
-        return df  # Return early if scaling fails
-
-    # sse = []
-    # for k in range(1, 11):
-    #     kmeans = KMeans(n_clusters=k, random_state=42)
-    #     kmeans.fit(input_data_scaled)
-    #     sse.append(kmeans.inertia_)
-    #
-    # knee_locator = KneeLocator(range(1, 11), sse, curve='convex', direction='decreasing')
-    # optimal_k = knee_locator.knee if knee_locator.knee else 3  # Default to 3 if no knee is found
-
-    # Running KMeans with the optimal number of clusters
-    optimal_kmeans = KMeans(n_clusters=5, random_state=42)
-    predicted_categories = optimal_kmeans.fit_predict(input_data_scaled)
-
-    df[label_column] = predicted_categories
-
-    return df
-
-def expand_and_cluster_student_mistakes_kmeans(df, embedding_type_prefix='category_hint'):
-    embedding_columns = [f'{embedding_type_prefix}_{i}_embedding' for i in range(1, 4)]
-    label_column = 'mistake_cluster_labels'
-    if label_column not in df.columns:
-        df.loc[:, label_column] = pd.NA
-
-    # Expand and Scale the DataFrame so each embedding is treated as a separate data point
-    expanded_df = expand_df(df, embedding_columns)
-    expanded_array_scaled = scale_data_to_array(expanded_df)
-
-    # Clustering
-    kmeans = KMeans(n_clusters=5, random_state=42)  # Adjust clusters as needed
-    cluster_labels = kmeans.fit_predict(expanded_array_scaled)
-
-    # sse = []
-    # for k in range(1, 11):
-    #     kmeans = KMeans(n_clusters=k, random_state=42)
-    #     kmeans.fit(input_data_scaled)
-    #     sse.append(kmeans.inertia_)
-    #
-    # knee_locator = KneeLocator(range(1, 11), sse, curve='convex', direction='decreasing')
-    # optimal_k = knee_locator.knee if knee_locator.knee else 3  # Default to 3 if no knee is found
-    #
-    # # Running KMeans with the optimal number of clusters
-    # optimal_kmeans = KMeans(n_clusters=optimal_k, random_state=42)
-    # predicted_categories = optimal_kmeans.fit_predict(input_data_scaled)
-
-    # Map cluster labels back to original DataFrame
-    try:
-        df = map_cluster_labels_to_df(df, cluster_labels, embedding_columns)
-    except Exception as e:
-        print(f"Error mapping cluster labels back to DataFrame: {e}")
-        return df
-    return
-
-
-def expand_df(df, embedding_columns):
-    # Expand the DataFrame so each embedding is treated as a separate data point
-    expanded_data = []
-    for idx, row in df.iterrows():
-        for col in embedding_columns:
-            embedding = row[col]
-            if isinstance(embedding, str):
-                try:
-                    embedding = ast.literal_eval(embedding)
-                except ValueError:
-                    continue  # Skip if the data cannot be converted
-            if isinstance(embedding, list):
-                expanded_data.append(embedding)
-
-    # Check if expanded data is non-empty
-    if not expanded_data:
-        print("No valid embeddings available for clustering.")
+    # Ensure all data is in list or array form
+    if not isinstance(input_data.iloc[0], (list, np.ndarray)):
+        print(f"Data in column {col_name} is not list or ndarray")
         return df
 
-    return expanded_data
+    return input_data.tolist()
 
 
-def scale_data_to_array(df):
-    # Convert list to numpy array and scale
-    df_array = np.array(df)
-    scaler = StandardScaler()
-    try:
-        df_array_scaled = scaler.fit_transform(df_array)
-    except Exception as e:
-        print(f"Error during scaling: {e}")
-        return df
+class ClusteringTechnique:
+    def __init__(self, algorithm, **kwargs):
+        self.algorithm = algorithm
+        self.n_clusters = kwargs.get('n_clusters', 5)
+        self.kwargs = kwargs
+        self.cluster_algorithm = None
+        self.optimal_n_clusters = None
+        self.label_column = 'mistake_category_label'
+        self.cluster_name_column = 'mistake_category_name'
 
-    return df_array_scaled
+    def cluster(self, X):
+        input_data = load_input_data(X, col_name='category_hint_embedding', label_column=self.label_column)
+        input_data_scaled = scale_data_to_array(input_data)
+
+        if self.algorithm == 'KMeans':
+            if self.n_clusters == -1:
+                sse = []
+                for k in range(1, 11):
+                    kmeans = KMeans(n_clusters=k, random_state=42)
+                    kmeans.fit(input_data_scaled)
+                    sse.append(kmeans.inertia_)
+
+                knee_locator = KneeLocator(range(1, 11), sse, curve='convex', direction='decreasing')
+                self.optimal_n_clusters = knee_locator.knee if knee_locator.knee else 3
+
+            n_clusters = self.optimal_n_clusters if self.optimal_n_clusters else self.n_clusters
+
+            self.cluster_algorithm = KMeans(n_clusters=n_clusters, **self.kwargs)
+        elif self.algorithm == 'DBSCAN':
+            min_samples = max(2, int(len(X) * 0.05))
+            self.cluster_algorithm = DBSCAN(eps=0.5, min_samples=min_samples, **self.kwargs)
+        else:
+            raise ValueError("Unsupported dimensionality reduction method.")
+
+        predicted_categories = self.cluster_algorithm.fit_predict(input_data_scaled)
+        X[self.label_column] = predicted_categories
+        return X
+
+    def choose_labels(self, X):
+        if self.cluster_name_column not in X.columns:
+            X[self.cluster_name_column] = np.nan
+
+        # Calculate the central point of each cluster
+        cluster_centers = X.groupby(self.label_column)['category_hint_embedding'].apply(
+            lambda embeddings: np.mean(np.stack(embeddings), axis=0))
+
+        for i, mistake_category_idx in enumerate(X[self.label_column].unique()):
+            mistake_category_df = X[X[self.label_column] == mistake_category_idx]
+
+            # Find most common mistake category name
+            if not mistake_category_df['category_hint'].mode().empty:
+                mistake_category_name = mistake_category_df['category_hint'].mode()[0]
+            else:
+                # Calculate the Euclidean distance to the cluster center
+                center_embedding = cluster_centers.loc[mistake_category_idx]
+                closest_idx = mistake_category_df['category_hint_embedding'].apply(
+                    lambda x: np.linalg.norm(np.array(x) - center_embedding)).idxmin()
+                mistake_category_name = mistake_category_df.loc[closest_idx, 'category_hint']
+
+            X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = mistake_category_name
+
+        return X
 
 
-def map_cluster_labels_to_df(df, cluster_labels, embedding_columns):
-    # Map cluster labels back to original DataFrame
-    label_index = 0
-    for idx, row in df.iterrows():
-        labels = []
-        for col in embedding_columns:
-            embedding = row[col]
-            if isinstance(embedding, str):
-                embedding = ast.literal_eval(embedding)
-            if isinstance(embedding, list):
-                labels.append(cluster_labels[label_index])
-                label_index += 1
-        df.at[idx, 'mistake_cluster_labels'] = str(labels)
-
-    return df
 
 
-def cluster_student_mistakes_dbscan(df, embedding_type_prefix='feedback', epsilon=0.5, min_samples_ratio=0.05):
-    label_column = f'mistake_category_index_from_{embedding_type_prefix}_embedding'
-    if label_column not in df.columns:
-        df.loc[:, label_column] = pd.NA
 
-    input_data = df[f'{embedding_type_prefix}_embedding']
-    if isinstance(input_data[0], str):
-        input_data = input_data.apply(ast.literal_eval).tolist()
-    else:
-        input_data = input_data.tolist()
 
-    scaler = StandardScaler()
-    input_data_scaled = scaler.fit_transform(input_data)
-
-    # Check if dynamic min_samples is appropriate ratio
-    min_samples = max(2, int(len(df) * min_samples_ratio))
-    dbscan = DBSCAN(eps=0.5, min_samples=5)
-    predicted_categories = dbscan.fit_predict(input_data_scaled)
-
-    df[label_column] = predicted_categories
-
-    return df

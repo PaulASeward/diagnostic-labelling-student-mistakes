@@ -3,7 +3,7 @@ from sklearn.manifold import TSNE, MDS, Isomap
 from sklearn.preprocessing import StandardScaler
 
 
-def available_techniques():
+def available_dimension_reduction_techniques():
     """
     Return a list of available dimensionality reduction techniques
     as options for a Dash dropdown component.
