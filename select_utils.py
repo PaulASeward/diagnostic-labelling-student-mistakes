@@ -56,6 +56,7 @@ class TaskSelector:
 
     def on_task_selection(self):
         if self.selections['course'] and self.selections['assignment'] and self.selections['tasks']:
+            print("Selected course, assignment, and tasks: ", self.selections['course'], self.selections['assignment'], self.selections['tasks'])
             self.selected_df = self.df_feedback[(self.df_feedback['course_id'] == self.selections['course']) & (self.df_feedback['assignment_id'] == self.selections['assignment']) & (self.df_feedback['task_id'].isin(self.selections['tasks']))]
 
             self.on_category_hint_generation()
@@ -131,12 +132,16 @@ class TaskSelector:
 
         for _, row in self.selected_df.iterrows():
             for i in range(1, 4):  # Generate three new rows for each category hint
-                new_row = row.copy()
-                new_row['category_hint'] = row[f'category_hint_{i}']
-                new_row['category_hint_embedding'] = row[f'category_hint_{i}_embedding']
-                new_row['category_hint_idx'] = i
-                new_row['mistake_category_name'] = pd.NA
-                new_df_rows.append(pd.DataFrame([new_row]))
+                # Only create new row if there is a category hint and embedding
+                if not pd.isna(row[f'category_hint_{i}']) and not pd.isna(row[f'category_hint_{i}_embedding']):
+                    new_row = row.copy()
+                    new_row['category_hint'] = row[f'category_hint_{i}']
+                    new_row['category_hint_embedding'] = row[f'category_hint_{i}_embedding']
+                    new_row['category_hint_idx'] = i
+                    new_row['mistake_category_name'] = pd.NA
+                    new_df_rows.append(pd.DataFrame([new_row]))
+                else:
+                    print(f"Skipping row with out category hint or embedding: {row['category_hints']}")
 
         expanded_df = pd.concat(new_df_rows, ignore_index=True)  # Concatenate all the frames
         self.expanded_df = expanded_df
@@ -152,16 +157,10 @@ class TaskSelector:
             filtered_df_with_category_embedding, self.category_embedding_array = get_processed_embeddings(self.expanded_df, 'category_hint_embedding')
             self.df_with_category_embeddings = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, self.category_embedding_array, 'category_hint', self.dimension_reduction_technique)
 
-# #
+
 ts = TaskSelector()
 ts.selections['course'] = 877
-ts.selections['assignment'] = 1302
-ts.selections['tasks'] = [691]
+ts.selections['assignment'] = 1307
+ts.selections['tasks'] = [1153]
 ts.on_task_selection()
-# ts.calculate_hints_and_categorize()
 
-# ts.on_dim_reduction_request()
-# ts.on_clustering_request()
-# ts.on_category_hint_generation()
-# # ts.on_embedding_request('ta_feedback_text')
-# ts.on_embedding_request('category_hint')

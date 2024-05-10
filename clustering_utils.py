@@ -54,6 +54,7 @@ def load_input_data(df, col_name, label_column='mistake_category_label'):
 
     Returns:
         list: A list of processed data suitable for clustering, or the original DataFrame in case of an error.
+        indices: The valid indices of the data in the DataFrame.
     """
     if label_column not in df.columns:
         df[label_column] = pd.NA
@@ -65,31 +66,42 @@ def load_input_data(df, col_name, label_column='mistake_category_label'):
 
     # Convert from string representations to lists if necessary
     if isinstance(input_data.iloc[0], str):
-        try:
-            input_data = input_data.apply(ast.literal_eval)
-        except ValueError as e:
-            print(f"Error converting input data from string in column {col_name}: {e}")
-            return df
+        def safe_literal_eval(s):
+            try:
+                return ast.literal_eval(s)
+            except ValueError:
+                print(f"Skipping malformed data: {s}")
+                return np.nan  # or use a default value or strategy appropriate to your data
+
+        input_data = input_data.apply(safe_literal_eval)
+
+    # Dropping NaN values and preserving the indices of the valid rows
+    valid_indices = input_data.dropna().index.tolist()
+    input_data = input_data.dropna()
 
     # Ensure all data is in list or array form
     if not isinstance(input_data.iloc[0], (list, np.ndarray)):
         print(f"Data in column {col_name} is not list or ndarray")
         return df
 
-    return input_data.tolist()
+    return input_data.tolist(), valid_indices
 
 
 def calculate_centroid_name(df):
     try:
-        centroid = np.mean(np.stack(df['category_hint_embedding'].tolist()), axis=0)
+        data = df['category_hint_embedding'].apply(eval if isinstance(df['category_hint_embedding'].iloc[0], str) else lambda x: x)
+        data_ls = data.tolist()
+        data_stack = np.stack(data_ls)
+        centroid = np.mean(data_stack, axis=0)
+
+        # centroid = np.mean(np.stack(df['category_hint_embedding'].tolist()), axis=0)
         # Find the closest data point to this centroid
         closest_idx = df['category_hint_embedding'].apply(
-            lambda x: np.linalg.norm(np.array(x) - centroid)).idxmin()
+            lambda x: np.linalg.norm(np.array(eval(x) if isinstance(x, str) else x) - centroid)).idxmin()
         return df.loc[closest_idx, 'category_hint']
     except Exception as e:
         print(f"Error computing centroid or finding closest point: {e}")
         return "Unnamed Cluster"  # Default name if something goes wrong
-
 
 
 class ClusteringTechnique:
@@ -103,7 +115,7 @@ class ClusteringTechnique:
         self.cluster_name_column = 'mistake_category_name'
 
     def cluster(self, X):
-        input_data = load_input_data(X, col_name='category_hint_embedding', label_column=self.label_column)
+        input_data, valid_indices = load_input_data(X, col_name='category_hint_embedding', label_column=self.label_column)
         input_data_scaled = scale_data_to_array(input_data)
 
         if self.algorithm == 'KMeans':
@@ -127,7 +139,8 @@ class ClusteringTechnique:
             raise ValueError("Unsupported dimensionality reduction method.")
 
         predicted_categories = self.cluster_algorithm.fit_predict(input_data_scaled)
-        X[self.label_column] = predicted_categories
+        # X[self.label_column] = predicted_categories
+        X.loc[valid_indices, self.label_column] = predicted_categories
         return X
 
     def choose_labels(self, X):
@@ -146,10 +159,3 @@ class ClusteringTechnique:
             X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = mistake_category_name
 
         return X
-
-
-
-
-
-
-
