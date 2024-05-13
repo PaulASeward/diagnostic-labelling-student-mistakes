@@ -34,7 +34,7 @@ def build_scatter_plot_with_mistake_category_trace(task_embeddings_df, embedding
     fig = go.Figure()
     fig = add_traces_by_mistake_category(fig, task_embeddings_df, embedding_type_prefix, jitter)
 
-    fig.update_layout(xaxis_title='Principal Component 1', yaxis_title='Principal Component 2', clickmode='event+select', width=1600, height=800,
+    fig.update_layout(xaxis_title='Principal Component 1', yaxis_title='Principal Component 2', clickmode='event+select', width=1200, height=800,
                       title={'text': title,'y': 0.9,'x': 0.5,'xanchor': 'center','yanchor': 'top','font': {'size': 20, 'color': 'black', 'family': "Arial"}},
                       legend=dict(# x=1.1,# y=0.5,# xanchor='right',# yanchor='middle',# orientation='v',
                           title=dict(text='Mistake Category', side='top')),)
@@ -51,29 +51,41 @@ def plot_mistake_statistics(df, category_col='mistake_category_name', category_i
         category_idx_col (str): Column name for the mistake category indices.
 
     Returns:
-        tuple: A tuple containing the pie chart figure and the bar chart figure.
+        figure: The pie chart figure.
     """
-    # Data preparation: Ensure the DataFrame contains the expected columns and data types
-    if category_col not in df.columns:
-        raise ValueError(f"The DataFrame must contain the column '{category_col}'.")
+    # # Data preparation: Ensure the DataFrame contains the expected columns and data types
+    # if category_col not in df.columns:
+    #     raise ValueError(f"The DataFrame must contain the column '{category_col}'.")
+    #
+    # # Count the occurrences of each category
+    # df_count = df.groupby(category_col).size().reset_index(name='count')
+    #
+    # # Create a consistent color mapping
+    # color_discrete_map = {category: COLOR_PALETTE[i % len(COLOR_PALETTE)] for i, category in enumerate(df_count[category_col])}
+    #
+    # # Generate Pie Chart
+    # pie_fig = px.pie(df_count, names=category_col, values='count', title='Distribution of Student Mistakes (Pie Chart)',
+    #                  color_discrete_map=color_discrete_map)
+    # pie_fig.update_traces(textposition='inside', textinfo='percent+label')
+    # pie_fig.update_layout(width=1000, height=1000)
 
-    # Count the occurrences of each category
-    df_count = df.groupby(category_col).size().reset_index(name='count')
+    #
+    # return pie_fig
+
+    if category_col not in df.columns or category_idx_col not in df.columns:
+        raise ValueError(f"The DataFrame must contain the columns '{category_col}' and '{category_idx_col}'.")
+
+        # Count the occurrences of each category
+    df_count = df.groupby([category_col, category_idx_col]).size().reset_index(name='count')
+    df_count['color'] = df_count[category_idx_col].apply(lambda idx: get_color_for_category(idx))
 
     # Create a consistent color mapping
-    color_discrete_map = {category: COLOR_PALETTE[i % len(COLOR_PALETTE)] for i, category in enumerate(df_count[category_col])}
+    color_discrete_map = {row[category_col]: row['color'] for index, row in df_count.iterrows()}
 
     # Generate Pie Chart
     pie_fig = px.pie(df_count, names=category_col, values='count', title='Distribution of Student Mistakes (Pie Chart)',
                      color_discrete_map=color_discrete_map)
     pie_fig.update_traces(textposition='inside', textinfo='percent+label')
-    pie_fig.update_layout(width=1000, height=1000)
+    pie_fig.update_layout(width=800, height=800)
 
-    # Generate Bar Chart
-    bar_fig = px.bar(df_count, x=category_col, y='count', title='Distribution of Student Mistakes (Bar Chart)',
-                     color=category_col, text='count', color_discrete_map=color_discrete_map)
-    bar_fig.update_traces(texttemplate='%{text}', textposition='outside')
-    bar_fig.update_layout(xaxis_title='Mistake Category', yaxis_title='Frequency',
-                          uniformtext_minsize=8, uniformtext_mode='hide', width=1200, height=800)
-
-    return pie_fig, bar_fig
+    return pie_fig

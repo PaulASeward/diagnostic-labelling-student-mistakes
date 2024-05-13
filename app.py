@@ -80,16 +80,13 @@ app.layout = html.Div([
         html.Button('Generate Dashboard', id='generate-button', n_clicks=0),
     ]),
     html.Div([
-        dcc.Graph(id='scatter-plot')
-    ]),
-    html.Div([
+        html.Div([
+            dcc.Graph(id='scatter-plot'),
+        ], style={'flex': '1', 'min-width': '0', 'width': '66%', 'padding-left': '0px'}),  # Adjust padding-left as needed
         html.Div([
             dcc.Graph(id='pie_fig'),
         ], style={'flex': '1', 'min-width': '0', 'padding-right': '0px'}),  # Adjust padding-right as needed
-        html.Div([
-            dcc.Graph(id='bar_fig'),
-        ], style={'flex': '1', 'min-width': '0', 'padding-left': '0px'}),  # Adjust padding-left as needed
-    ], style={'display': 'flex', 'gap': '0px'}),
+    ], style={'display': 'flex', 'flexGrow': '1', 'gap': '0px'}),
     html.Div(id='dummy-output', style={'display': 'none'}),
 ])
 
@@ -131,8 +128,7 @@ def set_task_options(selected_assignment_id):
 
 @app.callback(
     [Output('scatter-plot', 'figure'),
-     Output('pie_fig', 'figure'),
-     Output('bar_fig', 'figure')],
+     Output('pie_fig', 'figure')],
     [Input('generate-button', 'n_clicks'),
      Input('dimension-reduction-technique', 'value'),
      Input('clustering-technique', 'value'),],
@@ -148,22 +144,21 @@ def update_wholeclass_dashboard(n_clicks, dimension_reduction_technique, cluster
             task_selector.cluster_and_categorize()
             fig1 = go.Figure()
             pie_fig = go.Figure()
-            bar_fig = go.Figure()
             if not task_selector.df_with_category_embeddings.empty:
                 fig1 = build_scatter_plot_with_mistake_category_trace(task_embeddings_df=task_selector.df_with_category_embeddings, embedding_type_prefix='category_hint')
-                pie_fig, bar_fig = plot_mistake_statistics(task_selector.df_with_category_embeddings)
+                pie_fig = plot_mistake_statistics(task_selector.df_with_category_embeddings)
 
-            return fig1, pie_fig, bar_fig
+            return fig1, pie_fig
 
     elif triggered_id == 'dimension-reduction-technique':
         task_selector.on_dimension_reduction_selection(dimension_reduction_technique)
-        return dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update
     elif triggered_id == 'clustering-technique':
         task_selector.on_clustering_technique_selection(clustering_technique)
-        return dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update
 
 
-    return dash.no_update, dash.no_update, dash.no_update
+    return dash.no_update, dash.no_update
 
 
 if __name__ == '__main__':
