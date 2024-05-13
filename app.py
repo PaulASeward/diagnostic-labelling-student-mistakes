@@ -190,7 +190,6 @@ def update_wholeclass_dashboard(n_clicks, selected_data, dimension_reduction_tec
         task_selector.on_clustering_technique_selection(clustering_technique)
         return dash.no_update, dash.no_update, dash.no_update
 
-
     return dash.no_update, dash.no_update, dash.no_update
 
 
