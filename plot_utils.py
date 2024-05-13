@@ -6,15 +6,21 @@ import plotly.express as px
 COLOR_PALETTE = px.colors.qualitative.Plotly
 
 
+def create_color_map(task_embeddings_df, color_palette=COLOR_PALETTE):
+    unique_indices = task_embeddings_df['mistake_category_label'].unique()
+    return {idx: color_palette[idx % len(color_palette)] for idx in unique_indices}
+
+
 def get_color_for_category(mistake_category_idx, color_palette=COLOR_PALETTE):
     return color_palette[mistake_category_idx % len(color_palette)]
 
 
-def add_traces_by_mistake_category(fig, task_embeddings_df, embedding_type_prefix, jitter, mistake_label_column="mistake_category_label"):
+def add_traces_by_mistake_category(fig, task_embeddings_df, color_map, embedding_type_prefix, jitter, mistake_label_column="mistake_category_label", text_column="category_hint"):
     for _, mistake_category_idx in enumerate(task_embeddings_df[mistake_label_column].unique()):
         mistake_category_df = task_embeddings_df[task_embeddings_df[mistake_label_column] == mistake_category_idx]
-        marker_color = get_color_for_category(mistake_category_idx)  # Get color for Mistake Category Type
-        text_column = "category_hint"
+
+        marker_color = color_map[mistake_category_idx]  # Get color for Mistake Category Type
+        # marker_color = get_color_for_category(mistake_category_idx)  # Get color for Mistake Category Type
 
         x_values = mistake_category_df[f'reduced_{embedding_type_prefix}_embedding_1'] + (np.random.rand(len(mistake_category_df)) - 0.5) * jitter * (task_embeddings_df[f'reduced_{embedding_type_prefix}_embedding_1'].max() - task_embeddings_df[f'reduced_{embedding_type_prefix}_embedding_1'].min())
         y_values = mistake_category_df[f'reduced_{embedding_type_prefix}_embedding_2'] + (np.random.rand(len(mistake_category_df)) - 0.5) * jitter * (task_embeddings_df[f'reduced_{embedding_type_prefix}_embedding_2'].max() - task_embeddings_df[f'reduced_{embedding_type_prefix}_embedding_2'].min())
@@ -30,9 +36,10 @@ def add_traces_by_mistake_category(fig, task_embeddings_df, embedding_type_prefi
 
 def build_scatter_plot_with_mistake_category_trace(task_embeddings_df, embedding_type_prefix,  jitter=0.01):
     title = f'Visualizing Clusters of Mistake Labels from {embedding_type_prefix} Embeddings'
+    color_map = create_color_map(task_embeddings_df)
 
     fig = go.Figure()
-    fig = add_traces_by_mistake_category(fig, task_embeddings_df, embedding_type_prefix, jitter)
+    fig = add_traces_by_mistake_category(fig, task_embeddings_df, color_map, embedding_type_prefix, jitter)
 
     fig.update_layout(xaxis_title='Principal Component 1', yaxis_title='Principal Component 2', clickmode='event+select', width=1200, height=800,
                       title={'text': title,'y': 0.9,'x': 0.5,'xanchor': 'center','yanchor': 'top','font': {'size': 20, 'color': 'black', 'family': "Arial"}},
@@ -53,33 +60,12 @@ def plot_mistake_statistics(df, category_col='mistake_category_name', category_i
     Returns:
         figure: The pie chart figure.
     """
-    # # Data preparation: Ensure the DataFrame contains the expected columns and data types
-    # if category_col not in df.columns:
-    #     raise ValueError(f"The DataFrame must contain the column '{category_col}'.")
-    #
-    # # Count the occurrences of each category
-    # df_count = df.groupby(category_col).size().reset_index(name='count')
-    #
-    # # Create a consistent color mapping
-    # color_discrete_map = {category: COLOR_PALETTE[i % len(COLOR_PALETTE)] for i, category in enumerate(df_count[category_col])}
-    #
-    # # Generate Pie Chart
-    # pie_fig = px.pie(df_count, names=category_col, values='count', title='Distribution of Student Mistakes (Pie Chart)',
-    #                  color_discrete_map=color_discrete_map)
-    # pie_fig.update_traces(textposition='inside', textinfo='percent+label')
-    # pie_fig.update_layout(width=1000, height=1000)
-
-    #
-    # return pie_fig
-
     if category_col not in df.columns or category_idx_col not in df.columns:
         raise ValueError(f"The DataFrame must contain the columns '{category_col}' and '{category_idx_col}'.")
 
         # Count the occurrences of each category
     df_count = df.groupby([category_col, category_idx_col]).size().reset_index(name='count')
     df_count['color'] = df_count[category_idx_col].apply(lambda idx: get_color_for_category(idx))
-
-    # Create a consistent color mapping
     color_discrete_map = {row[category_col]: row['color'] for index, row in df_count.iterrows()}
 
     # Generate Pie Chart
