@@ -81,12 +81,32 @@ app.layout = html.Div([
     ]),
     html.Div([
         html.Div([
-            dcc.Graph(id='scatter-plot'),
+            dcc.Graph(id='scatter-plot', hoverData=None),
         ], style={'flex': '1', 'min-width': '0', 'width': '66%', 'padding-left': '0px'}),  # Adjust padding-left as needed
         html.Div([
             dcc.Graph(id='pie_fig'),
         ], style={'flex': '1', 'min-width': '0', 'padding-right': '0px'}),  # Adjust padding-right as needed
     ], style={'display': 'flex', 'flexGrow': '1', 'gap': '0px'}),
+    dash_table.DataTable(
+        id='table-feedback',
+        columns=[
+            {'name': 'Clustered Mistake Area Label', 'id': 'mistake_category_name'},
+            {'name': 'Suggested Mistake Area', 'id': 'category_hint'},
+            {'name': 'Entire Feedback', 'id': 'ta_feedback_text'},
+            {'name': 'Other Mistake Area Suggestions', 'id': 'category_hints'},
+            {'name': 'Grade', 'id': 'formatted_grade'},
+            {'name': 'Hyperlink', 'id': 'hyperlink', 'presentation': 'markdown'},
+        ],
+        markdown_options={"html": True},
+        style_table={'width': '70%', 'minWidth': '70%', 'height': 'auto', 'maxHeight': '500px', 'overflowY': 'auto',
+                     'overflowX': 'auto', 'margin': 'auto'},
+        style_cell={'fontFamily': 'Arial, sans-serif', 'fontSize': '14px', 'textAlign': 'left', 'whiteSpace': 'normal',
+                    'padding': '10px', 'paddingLeft': '0px', 'minWidth': '100px', 'width': '100px', 'maxWidth': '150px',
+                    'height': 'auto'},
+        style_header={'fontWeight': 'bold', 'backgroundColor': '#f3f3f3', 'color': 'black', 'paddingLeft': '0px',
+                      'borderBottom': '1px solid black'},
+        style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': 'rgb(248, 248, 248)'}]
+    ),
     html.Div(id='dummy-output', style={'display': 'none'}),
 ])
 
@@ -128,15 +148,17 @@ def set_task_options(selected_assignment_id):
 
 @app.callback(
     [Output('scatter-plot', 'figure'),
-     Output('pie_fig', 'figure')],
+     Output('pie_fig', 'figure'),
+     Output('table-feedback', 'data')],
     [Input('generate-button', 'n_clicks'),
+     Input('scatter-plot', 'selectedData'),
      Input('dimension-reduction-technique', 'value'),
      Input('clustering-technique', 'value'),],
     [State('course-dropdown', 'value'),
      State('assignment-dropdown', 'value'),
      State('task-checklist', 'value')]
 )
-def update_wholeclass_dashboard(n_clicks, dimension_reduction_technique, clustering_technique, selected_course, selected_assignment, selected_tasks):
+def update_wholeclass_dashboard(n_clicks, selected_data, dimension_reduction_technique, clustering_technique, selected_course, selected_assignment, selected_tasks):
     triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
 
     if triggered_id == 'generate-button':
@@ -144,21 +166,32 @@ def update_wholeclass_dashboard(n_clicks, dimension_reduction_technique, cluster
             task_selector.cluster_and_categorize()
             fig1 = go.Figure()
             pie_fig = go.Figure()
+            initial_table_data = []
+
             if not task_selector.df_with_category_embeddings.empty:
                 fig1 = build_scatter_plot_with_mistake_category_trace(task_embeddings_df=task_selector.df_with_category_embeddings, embedding_type_prefix='category_hint')
                 pie_fig = plot_mistake_statistics(task_selector.df_with_category_embeddings)
 
-            return fig1, pie_fig
+            return fig1, pie_fig, initial_table_data
+
+    elif triggered_id == 'scatter-plot':
+        if not selected_data:
+            raise PreventUpdate
+
+        selected_points_indice1 = [point['customdata']['student_id'] for point in selected_data['points']]
+        selected_points_indice2 = [point['customdata']['category_hint_idx'] for point in selected_data['points']]
+        updated_table_data = update_table(selected_points_indice1, selected_points_indice2, task_selector.df_with_category_embeddings)
+        return dash.no_update, dash.no_update, updated_table_data
 
     elif triggered_id == 'dimension-reduction-technique':
         task_selector.on_dimension_reduction_selection(dimension_reduction_technique)
-        return dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'clustering-technique':
         task_selector.on_clustering_technique_selection(clustering_technique)
-        return dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update
 
 
-    return dash.no_update, dash.no_update
+    return dash.no_update, dash.no_update, dash.no_update
 
 
 if __name__ == '__main__':

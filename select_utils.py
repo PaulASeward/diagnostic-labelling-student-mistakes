@@ -45,6 +45,7 @@ class TaskSelector:
         self.expand_df()
         self.on_clustering_request()
         self.on_dim_reduction_request()
+        self.add_table_columns()
 
     def on_dimension_reduction_selection(self, reduction_technique):
         self.dimension_reduction_technique = reduction_technique
@@ -151,10 +152,16 @@ class TaskSelector:
             filtered_df_with_category_embedding, self.category_embedding_array = get_processed_embeddings(self.expanded_df, 'category_hint_embedding')
             self.df_with_category_embeddings = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, self.category_embedding_array, 'category_hint', self.dimension_reduction_technique)
 
+    def add_table_columns(self):
+        if not self.df_with_category_embeddings.empty:
+            self.df_with_category_embeddings['hyperlink'] = self.df_with_category_embeddings.apply(lambda row: f"https://app.stemble.ca/web/courses/{row['course_id']}/assignments/{row['assignment_id']}/marking/{row['student_id']}/tasks/{row['task_id']}", axis=1)
+            self.df_with_category_embeddings['formatted_grade'] = self.df_with_category_embeddings['grade'].apply(lambda x: f"{(x * 100):.2f}%")
 
 # ts = TaskSelector()
 # ts.selections['course'] = 877
 # ts.selections['assignment'] = 1307
 # ts.selections['tasks'] = [1153]
 # ts.on_task_selection()
+# ts.cluster_and_categorize()
+
 

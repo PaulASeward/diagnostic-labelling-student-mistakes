@@ -15,12 +15,21 @@ def get_color_for_category(mistake_category_idx, color_palette=COLOR_PALETTE):
     return color_palette[mistake_category_idx % len(color_palette)]
 
 
+def update_table(current_selection_indices, current_category_hint_indices, task_embeddings_df):
+    filtered_df = task_embeddings_df[task_embeddings_df['student_id'].isin(current_selection_indices)]
+    filtered_df['hyperlink'] = filtered_df['hyperlink'].apply(lambda x: f"[Link]({x})")
+    filtered2_df = filtered_df[['mistake_category_name', 'category_hint', 'ta_feedback_text', 'category_hints', 'formatted_grade', 'hyperlink']]
+    data_to_display = filtered2_df.to_dict('records')
+    return data_to_display
+
+
 def add_traces_by_mistake_category(fig, task_embeddings_df, color_map, embedding_type_prefix, jitter, mistake_label_column="mistake_category_label", text_column="category_hint"):
     for _, mistake_category_idx in enumerate(task_embeddings_df[mistake_label_column].unique()):
         mistake_category_df = task_embeddings_df[task_embeddings_df[mistake_label_column] == mistake_category_idx]
 
         marker_color = color_map[mistake_category_idx]  # Get color for Mistake Category Type
         # marker_color = get_color_for_category(mistake_category_idx)  # Get color for Mistake Category Type
+        custom_data = mistake_category_df.apply(lambda row: {'student_id': row['student_id'], 'category_hint_idx': row['category_hint_idx']}, axis=1).tolist()
 
         x_values = mistake_category_df[f'reduced_{embedding_type_prefix}_embedding_1'] + (np.random.rand(len(mistake_category_df)) - 0.5) * jitter * (task_embeddings_df[f'reduced_{embedding_type_prefix}_embedding_1'].max() - task_embeddings_df[f'reduced_{embedding_type_prefix}_embedding_1'].min())
         y_values = mistake_category_df[f'reduced_{embedding_type_prefix}_embedding_2'] + (np.random.rand(len(mistake_category_df)) - 0.5) * jitter * (task_embeddings_df[f'reduced_{embedding_type_prefix}_embedding_2'].max() - task_embeddings_df[f'reduced_{embedding_type_prefix}_embedding_2'].min())
@@ -29,7 +38,7 @@ def add_traces_by_mistake_category(fig, task_embeddings_df, color_map, embedding
             x=x_values,
             y=y_values,
             mode='markers', marker=dict(color=marker_color, line=dict(width=1, color='DarkSlateGrey')),
-            name=mistake_category_df['mistake_category_name'].iloc[0], text=mistake_category_df[text_column], hoverinfo='text+name'
+            name=mistake_category_df['mistake_category_name'].iloc[0], text=mistake_category_df[text_column], customdata=custom_data, hoverinfo='text+name'
         ))
     return fig
 
