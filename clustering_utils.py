@@ -122,7 +122,7 @@ class ClusteringTechnique:
             if self.n_clusters == -1:
                 sse = []
                 for k in range(1, 11):
-                    kmeans = KMeans(n_clusters=k, random_state=42)
+                    kmeans = KMeans(n_clusters=k, n_init=10, random_state=42)
                     kmeans.fit(input_data_scaled)
                     sse.append(kmeans.inertia_)
 
@@ -131,7 +131,7 @@ class ClusteringTechnique:
 
             n_clusters = self.optimal_n_clusters if self.optimal_n_clusters else self.n_clusters
 
-            self.cluster_algorithm = KMeans(n_clusters=n_clusters, **self.kwargs)
+            self.cluster_algorithm = KMeans(n_clusters=n_clusters, n_init=10, **self.kwargs)
         elif self.algorithm == 'DBSCAN':
             min_samples = max(2, int(len(X) * 0.05))
             self.cluster_algorithm = DBSCAN(eps=0.5, min_samples=min_samples, **self.kwargs)
