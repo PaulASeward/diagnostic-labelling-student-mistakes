@@ -20,6 +20,7 @@ class TaskSelector:
         self.expanded_df = None
         self.clustering_technique = 'KMeans'
         self.dimension_reduction_technique = 'PCA'
+        self.number_of_clusters = 4
         self.df_with_category_embeddings = None
         self.category_embedding_array = None
 
@@ -52,6 +53,9 @@ class TaskSelector:
 
     def on_clustering_technique_selection(self, clustering_technique):
         self.clustering_technique = clustering_technique
+
+    def on_cluster_groups_selection(self, n_clusters):
+        self.number_of_clusters = n_clusters
 
     def on_task_selection(self):
         if self.selections['course'] and self.selections['assignment'] and self.selections['tasks']:
@@ -143,7 +147,7 @@ class TaskSelector:
 
     def on_clustering_request(self):
         if not self.expanded_df.empty:
-            cluster_technique = ClusteringTechnique(self.clustering_technique)
+            cluster_technique = ClusteringTechnique(self.clustering_technique, n_clusters=self.number_of_clusters)
             self.expanded_df = cluster_technique.cluster(self.expanded_df)
             self.expanded_df = cluster_technique.choose_labels(self.expanded_df)
 

@@ -105,9 +105,9 @@ def calculate_centroid_name(df):
 
 
 class ClusteringTechnique:
-    def __init__(self, algorithm, **kwargs):
+    def __init__(self, algorithm, n_clusters=5, **kwargs):
         self.algorithm = algorithm
-        self.n_clusters = kwargs.get('n_clusters', 5)
+        self.n_clusters = n_clusters
         self.kwargs = kwargs
         self.cluster_algorithm = None
         self.optimal_n_clusters = None

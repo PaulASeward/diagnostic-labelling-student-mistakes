@@ -76,9 +76,33 @@ app.layout = html.Div([
         ]
     ),
     html.Div([
-        html.Button('Load Data', id='load-button', n_clicks=0),
-        html.Button('Generate Dashboard', id='generate-button', n_clicks=0),
-    ]),
+        html.Div([
+            html.Button('Load Data', id='load-button', n_clicks=0),
+        ], style={'padding-right': '4px'}),
+        html.Div([
+            html.Button('Generate Dashboard', id='generate-button', n_clicks=0),
+        ], style={'padding-right': '4px'}),
+        html.Div([
+            dcc.Dropdown(
+                id='cluster-groups-dropdown',
+                placeholder="Select number of clusters",
+                options=[
+                    {'label': 'Auto', 'value': -1},
+                     {'label': '1', 'value': 1},
+                     {'label': '2', 'value': 2},
+                     {'label': '3', 'value': 3},
+                     {'label': '4', 'value': 4},
+                     {'label': '5', 'value': 5},
+                     {'label': '6', 'value': 6},
+                     {'label': '7', 'value': 7},
+                     {'label': '8', 'value': 8},
+                    {'label': '9', 'value': 9},
+                    {'label': '10', 'value': 10},
+
+                ],
+            ),
+        ], style={'width': '25%', 'padding-right': '0px'})
+    ], style={'display': 'flex', 'flexGrow': '1', 'gap': '0px'}),
     html.Div([
         html.Div([
             dcc.Graph(id='scatter-plot', hoverData=None),
@@ -153,12 +177,13 @@ def set_task_options(selected_assignment_id):
     [Input('generate-button', 'n_clicks'),
      Input('scatter-plot', 'selectedData'),
      Input('dimension-reduction-technique', 'value'),
-     Input('clustering-technique', 'value'),],
+     Input('clustering-technique', 'value'),
+     Input('cluster-groups-dropdown', 'value')],
     [State('course-dropdown', 'value'),
      State('assignment-dropdown', 'value'),
      State('task-checklist', 'value')]
 )
-def update_wholeclass_dashboard(n_clicks, selected_data, dimension_reduction_technique, clustering_technique, selected_course, selected_assignment, selected_tasks):
+def update_wholeclass_dashboard(n_clicks, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, selected_course, selected_assignment, selected_tasks):
     triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
 
     if triggered_id == 'generate-button':
@@ -188,6 +213,9 @@ def update_wholeclass_dashboard(n_clicks, selected_data, dimension_reduction_tec
         return dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'clustering-technique':
         task_selector.on_clustering_technique_selection(clustering_technique)
+        return dash.no_update, dash.no_update, dash.no_update
+    elif triggered_id == 'cluster-groups-dropdown':
+        task_selector.on_cluster_groups_selection(n_clusters)
         return dash.no_update, dash.no_update, dash.no_update
 
     return dash.no_update, dash.no_update, dash.no_update
