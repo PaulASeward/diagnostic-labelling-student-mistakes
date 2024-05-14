@@ -15,10 +15,10 @@ def get_color_for_category(mistake_category_idx, color_palette=COLOR_PALETTE):
     return color_palette[mistake_category_idx % len(color_palette)]
 
 
-def update_table(current_selection_indices, current_category_hint_indices, task_embeddings_df):
-    filtered_df = task_embeddings_df[task_embeddings_df['student_id'].isin(current_selection_indices)]
-    filtered_df['hyperlink'] = filtered_df['hyperlink'].apply(lambda x: f"[Link]({x})")
-    filtered2_df = filtered_df[['mistake_category_name', 'category_hint', 'ta_feedback_text', 'category_hints', 'formatted_grade', 'hyperlink']]
+def update_table(current_selection_indices, task_embeddings_df):
+    filtered_df = task_embeddings_df[task_embeddings_df.apply(lambda row: (row['student_id'], row['category_hint_idx']) in current_selection_indices, axis=1)]
+    filtered_df['formatted_grade'] = filtered_df.apply(lambda row: f"[{(row['grade'] * 100):.2f}%](https://app.stemble.ca/web/courses/{row['course_id']}/assignments/{row['assignment_id']}/marking/{row['student_id']}/tasks/{row['task_id']})", axis=1)
+    filtered2_df = filtered_df[['mistake_category_name', 'category_hint', 'ta_feedback_text', 'category_hints', 'formatted_grade']]
     data_to_display = filtered2_df.to_dict('records')
     return data_to_display
 

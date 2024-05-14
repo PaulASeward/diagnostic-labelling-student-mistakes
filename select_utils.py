@@ -23,10 +23,7 @@ class TaskSelector:
         self.number_of_clusters = 4
         self.df_with_category_embeddings = None
         self.category_embedding_array = None
-
-        # columns_to_delete = ['category_embedding', 'category_embedding_1', 'category_embedding_2', 'category_embedding_3']
-        # self.df_feedback.drop(columns=[col for col in columns_to_delete if col in self.df_feedback.columns], inplace=True)
-        # self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
+        self.common_mistake_categories = []
 
         columns_to_add = ['category_hints', 'category_hint_idx', 'category_hint_1', 'category_hint_1_embedding', 'category_hint_2', 'category_hint_2_embedding', 'category_hint_3', 'category_hint_3_embedding']
         changes_made = False
@@ -46,7 +43,6 @@ class TaskSelector:
         self.expand_df()
         self.on_clustering_request()
         self.on_dim_reduction_request()
-        self.add_table_columns()
 
     def on_dimension_reduction_selection(self, reduction_technique):
         self.dimension_reduction_technique = reduction_technique
@@ -159,10 +155,6 @@ class TaskSelector:
             filtered_df_with_category_embedding, self.category_embedding_array = get_processed_embeddings(self.expanded_df, 'category_hint_embedding')
             self.df_with_category_embeddings = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, self.category_embedding_array, 'category_hint', self.dimension_reduction_technique)
 
-    def add_table_columns(self):
-        if not self.df_with_category_embeddings.empty:
-            self.df_with_category_embeddings['hyperlink'] = self.df_with_category_embeddings.apply(lambda row: f"https://app.stemble.ca/web/courses/{row['course_id']}/assignments/{row['assignment_id']}/marking/{row['student_id']}/tasks/{row['task_id']}", axis=1)
-            self.df_with_category_embeddings['formatted_grade'] = self.df_with_category_embeddings['grade'].apply(lambda x: f"{(x * 100):.2f}%")
 
 # ts = TaskSelector()
 # ts.selections['course'] = 879

@@ -118,8 +118,7 @@ app.layout = html.Div([
             {'name': 'Suggested Mistake Area', 'id': 'category_hint'},
             {'name': 'Entire Feedback', 'id': 'ta_feedback_text'},
             {'name': 'Other Mistake Area Suggestions', 'id': 'category_hints'},
-            {'name': 'Grade', 'id': 'formatted_grade'},
-            {'name': 'Hyperlink', 'id': 'hyperlink', 'presentation': 'markdown'},
+            {'name': 'Grade', 'id': 'formatted_grade', 'presentation': 'markdown'},
         ],
         markdown_options={"html": True},
         style_table={'width': '70%', 'minWidth': '70%', 'height': 'auto', 'maxHeight': '500px', 'overflowY': 'auto',
@@ -129,7 +128,8 @@ app.layout = html.Div([
                     'height': 'auto'},
         style_header={'fontWeight': 'bold', 'backgroundColor': '#f3f3f3', 'color': 'black', 'paddingLeft': '0px',
                       'borderBottom': '1px solid black'},
-        style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': 'rgb(248, 248, 248)'}]
+        style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': 'rgb(248, 248, 248)'},
+                                {'if': {'column_id': 'ta_feedback_text'}, 'textAlign': 'left', 'padding': '15px', 'fontSize': '16px', 'minWidth': '300px', 'width': '40%', 'maxWidth': '600px'}]
     ),
     html.Div(id='dummy-output', style={'display': 'none'}),
 ])
@@ -203,9 +203,10 @@ def update_wholeclass_dashboard(n_clicks, selected_data, dimension_reduction_tec
         if not selected_data:
             raise PreventUpdate
 
-        selected_points_indice1 = [point['customdata']['student_id'] for point in selected_data['points']]
-        selected_points_indice2 = [point['customdata']['category_hint_idx'] for point in selected_data['points']]
-        updated_table_data = update_table(selected_points_indice1, selected_points_indice2, task_selector.df_with_category_embeddings)
+        # selected_points_indices1 = [point['customdata']['student_id'] for point in selected_data['points']]
+        # selected_points_indices2 = [point['customdata']['category_hint_idx'] for point in selected_data['points']]
+        selected_points_indices = [(point['customdata']['student_id'], point['customdata']['category_hint_idx']) for point in selected_data['points']]
+        updated_table_data = update_table(selected_points_indices, task_selector.df_with_category_embeddings)
         return dash.no_update, dash.no_update, updated_table_data
 
     elif triggered_id == 'dimension-reduction-technique':
