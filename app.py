@@ -136,23 +136,6 @@ app.layout = html.Div([
 
 
 @app.callback(
-    Output('dummy-output', 'children'),
-    Input('load-button', 'n_clicks'),
-    [State('course-dropdown', 'value'),
-     State('assignment-dropdown', 'value'),
-     State('task-checklist', 'value')]
-)
-def choose_tasks(n_clicks, selected_course, selected_assignment, selected_tasks):
-    triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
-
-    if triggered_id == 'load-button':
-        if n_clicks > 0:
-            if selected_tasks != task_selector.selections['tasks']:  # New tasks are selected
-                task_selector.selections['tasks'] = selected_tasks
-                task_selector.on_task_selection()
-    return dash.no_update
-
-@app.callback(
     Output('assignment-dropdown', 'options'),
     Input('course-dropdown', 'value')
 )
@@ -171,6 +154,24 @@ def set_task_options(selected_assignment_id):
 
 
 @app.callback(
+    Output('dummy-output', 'children'),
+    Input('load-button', 'n_clicks'),
+    [State('course-dropdown', 'value'),
+     State('assignment-dropdown', 'value'),
+     State('task-checklist', 'value')]
+)
+def choose_tasks(n_clicks, selected_course, selected_assignment, selected_tasks):
+    triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
+
+    if triggered_id == 'load-button':
+        if n_clicks > 0:
+            if selected_tasks != task_selector.selections['tasks']:  # New tasks are selected
+                task_selector.selections['tasks'] = selected_tasks
+                task_selector.on_task_selection()
+    return dash.no_update
+
+
+@app.callback(
     [Output('scatter-plot', 'figure'),
      Output('pie_fig', 'figure'),
      Output('table-feedback', 'data')],
@@ -181,14 +182,19 @@ def set_task_options(selected_assignment_id):
      Input('cluster-groups-dropdown', 'value')],
     [State('course-dropdown', 'value'),
      State('assignment-dropdown', 'value'),
-     State('task-checklist', 'value')]
+     State('task-checklist', 'value'),
+     State('cluster-groups-dropdown', 'value'),
+     State('clustering-technique', 'value'),
+     ]
 )
-def update_wholeclass_dashboard(n_clicks, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, selected_course, selected_assignment, selected_tasks):
+def update_dashboard(n_clicks, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, selected_course, selected_assignment, selected_tasks, selected_n_clusters, selected_clustering_technique):
     triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
 
     if triggered_id == 'generate-button':
         if n_clicks > 0:
-            task_selector.cluster_and_categorize()
+            task_selector.on_clustering_request()
+            task_selector.on_dim_reduction_request()
+
             fig1 = go.Figure()
             pie_fig = go.Figure()
             initial_table_data = []
@@ -202,21 +208,18 @@ def update_wholeclass_dashboard(n_clicks, selected_data, dimension_reduction_tec
     elif triggered_id == 'scatter-plot':
         if not selected_data:
             raise PreventUpdate
-
-        # selected_points_indices1 = [point['customdata']['student_id'] for point in selected_data['points']]
-        # selected_points_indices2 = [point['customdata']['category_hint_idx'] for point in selected_data['points']]
         selected_points_indices = [(point['customdata']['student_id'], point['customdata']['category_hint_idx']) for point in selected_data['points']]
         updated_table_data = update_table(selected_points_indices, task_selector.df_with_category_embeddings)
         return dash.no_update, dash.no_update, updated_table_data
 
     elif triggered_id == 'dimension-reduction-technique':
-        task_selector.on_dimension_reduction_selection(dimension_reduction_technique)
+        task_selector.dimension_reduction_technique = dimension_reduction_technique
         return dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'clustering-technique':
-        task_selector.on_clustering_technique_selection(clustering_technique)
+        task_selector.on_cluster_config_selection(clustering_technique, selected_n_clusters)
         return dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'cluster-groups-dropdown':
-        task_selector.on_cluster_groups_selection(n_clusters)
+        task_selector.on_cluster_config_selection(selected_clustering_technique, n_clusters)
         return dash.no_update, dash.no_update, dash.no_update
 
     return dash.no_update, dash.no_update, dash.no_update

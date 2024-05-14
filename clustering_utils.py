@@ -104,13 +104,15 @@ def calculate_centroid_name(df):
         return "Unnamed Cluster"  # Default name if something goes wrong
 
 
-class ClusteringTechnique:
-    def __init__(self, algorithm, n_clusters=5, **kwargs):
-        self.algorithm = algorithm
+class ClusterAlgorithm:
+    def __init__(self, clustering_technique, n_clusters=5, **kwargs):
+        self.clustering_technique = clustering_technique
         self.n_clusters = n_clusters
         self.kwargs = kwargs
         self.cluster_algorithm = None
         self.optimal_n_clusters = None
+        self.manual_mistake_categories = None  # Dictionary of {name: embedding}
+        self.use_manual_mistake_categories = False
         self.label_column = 'mistake_category_label'
         self.cluster_name_column = 'mistake_category_name'
 
@@ -118,7 +120,19 @@ class ClusteringTechnique:
         input_data, valid_indices = load_input_data(X, col_name='category_hint_embedding', label_column=self.label_column)
         input_data_scaled = scale_data_to_array(input_data)
 
-        if self.algorithm == 'KMeans':
+        if self.use_manual_mistake_categories and self.manual_mistake_categories:
+            category_names = list(self.manual_mistake_categories.keys())
+            initial_centers = np.stack([self.manual_mistake_categories[name] for name in category_names])
+            self.cluster_algorithm = KMeans(n_clusters=len(initial_centers), init=initial_centers, n_init=1, **self.kwargs)
+
+            # closest_category_indices = np.argmin(np.linalg.norm(initial_centers[:, np.newaxis] - input_data_scaled, axis=2), axis=0)
+            # X.loc[valid_indices, self.label_column] = closest_category_indices  # Preliminary labeling
+
+            predicted_categories = self.cluster_algorithm.fit_predict(input_data_scaled)
+            X.loc[valid_indices, self.label_column] = predicted_categories
+            return X
+
+        elif self.clustering_technique == 'KMeans':
             if self.n_clusters == -1:
                 sse = []
                 for k in range(1, 11):
@@ -127,21 +141,24 @@ class ClusteringTechnique:
                     sse.append(kmeans.inertia_)
 
                 knee_locator = KneeLocator(range(1, 11), sse, curve='convex', direction='decreasing')
-                self.optimal_n_clusters = knee_locator.knee if knee_locator.knee else 3
+                self.optimal_n_clusters = knee_locator.knee if knee_locator.knee else 4
 
             n_clusters = self.optimal_n_clusters if self.optimal_n_clusters else self.n_clusters
 
             self.cluster_algorithm = KMeans(n_clusters=n_clusters, n_init=10, **self.kwargs)
-        elif self.algorithm == 'DBSCAN':
+
+            predicted_categories = self.cluster_algorithm.fit_predict(input_data_scaled)
+            X.loc[valid_indices, self.label_column] = predicted_categories
+            return X
+
+        elif self.clustering_technique == 'DBSCAN':
             min_samples = max(2, int(len(X) * 0.05))
             self.cluster_algorithm = DBSCAN(eps=0.5, min_samples=min_samples, **self.kwargs)
+            db_labels = self.cluster_algorithm.fit_predict(input_data_scaled)
+            X.loc[valid_indices, self.label_column] = np.where(db_labels == -1, X.loc[valid_indices, self.label_column], db_labels)
+            return X
         else:
             raise ValueError("Unsupported dimensionality reduction method.")
-
-        predicted_categories = self.cluster_algorithm.fit_predict(input_data_scaled)
-        # X[self.label_column] = predicted_categories
-        X.loc[valid_indices, self.label_column] = predicted_categories
-        return X
 
     def choose_labels(self, X):
         if self.cluster_name_column not in X.columns:
@@ -150,12 +167,20 @@ class ClusteringTechnique:
         for i, mistake_category_idx in enumerate(X[self.label_column].unique()):
             mistake_category_df = X[X[self.label_column] == mistake_category_idx]
 
-            # Find most common mistake category name
-            if not mistake_category_df['category_hint'].mode().empty:
-                mistake_category_name = mistake_category_df['category_hint'].mode()[0]
+            if self.use_manual_mistake_categories and self.manual_mistake_categories:
+                # Find the closest manual category by embedding distance
+                embeddings = np.array([self.manual_mistake_categories[name] for name in self.manual_mistake_categories])
+                distances = np.linalg.norm(embeddings - self.cluster_algorithm.cluster_centers_[mistake_category_idx], axis=1)
+                closest_category = list(self.manual_mistake_categories.keys())[np.argmin(distances)]
+                X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = closest_category
             else:
-                mistake_category_name = calculate_centroid_name(mistake_category_df)
 
-            X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = mistake_category_name
+                # Find most common mistake category name
+                if not mistake_category_df['category_hint'].mode().empty:
+                    mistake_category_name = mistake_category_df['category_hint'].mode()[0]
+                else:
+                    mistake_category_name = calculate_centroid_name(mistake_category_df)
+
+                X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = mistake_category_name
 
         return X

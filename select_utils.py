@@ -18,12 +18,12 @@ class TaskSelector:
         self.selections = {'course': None, 'assignment': None, 'tasks': []}
         self.selected_df = None
         self.expanded_df = None
-        self.clustering_technique = 'KMeans'
+        self.expanded = False
+        self.cluster_algorithm = ClusterAlgorithm('KMeans', n_clusters=5)
         self.dimension_reduction_technique = 'PCA'
-        self.number_of_clusters = 4
         self.df_with_category_embeddings = None
         self.category_embedding_array = None
-        self.common_mistake_categories = []
+        self.common_mistake_categories = {}
 
         columns_to_add = ['category_hints', 'category_hint_idx', 'category_hint_1', 'category_hint_1_embedding', 'category_hint_2', 'category_hint_2_embedding', 'category_hint_3', 'category_hint_3_embedding']
         changes_made = False
@@ -39,31 +39,33 @@ class TaskSelector:
         """Create a mapping from id to title for dropdown options."""
         return self.df_feedback[[id_column, title_column]].drop_duplicates().set_index(id_column)[title_column].to_dict()
 
-    def cluster_and_categorize(self):
-        self.expand_df()
-        self.on_clustering_request()
-        self.on_dim_reduction_request()
+    def on_cluster_config_selection(self, clustering_technique='KMeans', n_clusters=5):
+        self.cluster_algorithm.clustering_technique = clustering_technique
+        self.cluster_algorithm.n_clusters = n_clusters
 
-    def on_dimension_reduction_selection(self, reduction_technique):
-        self.dimension_reduction_technique = reduction_technique
+    def on_manually_added_mistake_category_selection(self, mistake_categories):
+        n_clusters = len(mistake_categories)
+        if self.common_mistake_categories and self.common_mistake_categories != mistake_categories and n_clusters > 0:
 
-    def on_clustering_technique_selection(self, clustering_technique):
-        self.clustering_technique = clustering_technique
+            for mistake_category in mistake_categories:
+                if mistake_category not in self.common_mistake_categories:
+                    self.common_mistake_categories[mistake_category] = calculate_embedding(mistake_category)
 
-    def on_cluster_groups_selection(self, n_clusters):
-        self.number_of_clusters = n_clusters
+            self.cluster_algorithm.manual_mistake_categories = self.common_mistake_categories
+            self.cluster_algorithm.use_manual_mistake_categories = True
+            self.cluster_algorithm.n_clusters = n_clusters
+
+    def load_task(self):
+        self.selected_df = self.df_feedback[(self.df_feedback['course_id'] == self.selections['course']) & (self.df_feedback['assignment_id'] == self.selections['assignment']) & (self.df_feedback['task_id'].isin(self.selections['tasks']))]
 
     def on_task_selection(self):
         if self.selections['course'] and self.selections['assignment'] and self.selections['tasks']:
             print("Selected course, assignment, and tasks: ", self.selections['course'], self.selections['assignment'], self.selections['tasks'])
-            self.selected_df = self.df_feedback[(self.df_feedback['course_id'] == self.selections['course']) & (self.df_feedback['assignment_id'] == self.selections['assignment']) & (self.df_feedback['task_id'].isin(self.selections['tasks']))]
-
+            self.load_task()
             self.on_category_hint_generation()
             self.on_embedding_request()
-
-            # Reselect with updated df
-            self.selected_df = self.df_feedback[(self.df_feedback['course_id'] == self.selections['course']) & (self.df_feedback['assignment_id'] == self.selections['assignment']) & (self.df_feedback['task_id'].isin(self.selections['tasks']))]
-
+            self.load_task()
+            self.expand_df()
         return None
 
     def on_category_hint_generation(self):
@@ -145,10 +147,9 @@ class TaskSelector:
         self.expanded_df = expanded_df
 
     def on_clustering_request(self):
-        if not self.expanded_df.empty:
-            cluster_technique = ClusteringTechnique(self.clustering_technique, n_clusters=self.number_of_clusters)
-            self.expanded_df = cluster_technique.cluster(self.expanded_df)
-            self.expanded_df = cluster_technique.choose_labels(self.expanded_df)
+        if not self.expanded_df.empty and self.cluster_algorithm:
+            self.expanded_df = self.cluster_algorithm.cluster(self.expanded_df)
+            self.expanded_df = self.cluster_algorithm.choose_labels(self.expanded_df)
 
     def on_dim_reduction_request(self):
         if not self.expanded_df.empty:
@@ -156,10 +157,13 @@ class TaskSelector:
             self.df_with_category_embeddings = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, self.category_embedding_array, 'category_hint', self.dimension_reduction_technique)
 
 
+
+
+
 # ts = TaskSelector()
 # ts.selections['course'] = 879
-# ts.selections['assignment'] = 1544
-# ts.selections['tasks'] = [1139]
+# ts.selections['assignment'] = 1539
+# ts.selections['tasks'] = [1128]
 # ts.on_task_selection()
 # ts.cluster_and_categorize()
 
