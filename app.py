@@ -78,10 +78,10 @@ app.layout = html.Div([
     html.Div([
         html.Div([
             html.Button('Load Data', id='load-button', n_clicks=0),
-        ], style={'padding-right': '4px'}),
+        ], style={'padding-right': '8px'}),
         html.Div([
             html.Button('Generate Dashboard', id='generate-button', n_clicks=0),
-        ], style={'padding-right': '4px'}),
+        ], style={'padding-right': '8px'}),
         html.Div([
             dcc.Dropdown(
                 id='cluster-groups-dropdown',

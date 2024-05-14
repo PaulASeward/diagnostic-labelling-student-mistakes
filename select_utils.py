@@ -65,6 +65,9 @@ class TaskSelector:
             self.on_category_hint_generation()
             self.on_embedding_request()
 
+            # Reselect with updated df
+            self.selected_df = self.df_feedback[(self.df_feedback['course_id'] == self.selections['course']) & (self.df_feedback['assignment_id'] == self.selections['assignment']) & (self.df_feedback['task_id'].isin(self.selections['tasks']))]
+
         return None
 
     def on_category_hint_generation(self):
@@ -162,9 +165,9 @@ class TaskSelector:
             self.df_with_category_embeddings['formatted_grade'] = self.df_with_category_embeddings['grade'].apply(lambda x: f"{(x * 100):.2f}%")
 
 # ts = TaskSelector()
-# ts.selections['course'] = 877
-# ts.selections['assignment'] = 1307
-# ts.selections['tasks'] = [1153]
+# ts.selections['course'] = 879
+# ts.selections['assignment'] = 1544
+# ts.selections['tasks'] = [1139]
 # ts.on_task_selection()
 # ts.cluster_and_categorize()
 
