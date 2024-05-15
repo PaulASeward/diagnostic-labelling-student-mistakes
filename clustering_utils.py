@@ -134,6 +134,7 @@ class ClusterAlgorithm:
             distance_to_centers = np.linalg.norm(input_data_scaled[:, np.newaxis] - initial_centers, axis=2)
             closest_centers_indices = np.argmin(distance_to_centers, axis=1)
             X.loc[valid_indices, self.label_column] = closest_centers_indices
+            return X
 
         elif self.clustering_technique == 'KMeans':
             if self.n_clusters == -1:

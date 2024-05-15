@@ -45,7 +45,7 @@ def clean_category_hints(category_hints):
             items = [item for item in items if item.strip()]
 
             # Strip whitespace and slice to get at most the first three items
-        selected_items = [item.strip() if item.strip() != 'None' else pd.NA for item in items[:3]]
+        selected_items = [item.strip() if item.strip() != 'None' or item.strip() != 'N/A' else pd.NA for item in items[:3]]
 
         # Ensure there are exactly three items, filling with pd.NA if fewer than three
         while len(selected_items) < 3:
