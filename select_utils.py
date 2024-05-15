@@ -23,7 +23,6 @@ class TaskSelector:
         self.dimension_reduction_technique = 'PCA'
         self.df_with_category_embeddings = None
         self.category_embedding_array = None
-        self.mistake_category_names = None
         self.number_mistake_labels = 3
 
         columns_to_add = ['category_hints', 'category_hint_idx', 'category_hint_1', 'category_hint_1_embedding', 'category_hint_2', 'category_hint_2_embedding', 'category_hint_3', 'category_hint_3_embedding']

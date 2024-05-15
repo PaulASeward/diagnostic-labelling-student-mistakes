@@ -230,12 +230,14 @@ def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_da
 
             fig1 = go.Figure()
             pie_fig = go.Figure()
+            dendro_fig = go.Figure()
             initial_table_data = []
             suggested_mistake_categories = [{'option': name} for name in task_selector.cluster_algorithm.mistake_categories_dict.keys()]
 
             if not task_selector.df_with_category_embeddings.empty:
-                fig1 = build_scatter_plot_with_mistake_category_trace(task_embeddings_df=task_selector.df_with_category_embeddings, embedding_type_prefix='category_hint')
-                pie_fig = plot_mistake_statistics(task_selector.df_with_category_embeddings)
+                fig1 = build_scatter_plot_with_mistake_category_trace(task_selector.df_with_category_embeddings, task_selector.cluster_algorithm.mistake_categories_dict)
+                pie_fig = plot_mistake_statistics(task_selector.df_with_category_embeddings, task_selector.cluster_algorithm.mistake_categories_dict)
+                # dendro_fig = plot_dendrogram(task_selector.df_with_category_embeddings)
 
             return suggested_mistake_categories, fig1, pie_fig, initial_table_data
 

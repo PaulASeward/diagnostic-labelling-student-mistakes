@@ -33,6 +33,7 @@ def add_category_hint(feedback):
 
 def clean_category_hints(category_hints):
     if (isinstance(category_hints, str) and category_hints == '') or pd.isna(category_hints):
+        print("No Category Hint provided", category_hints)
         return [pd.NA, pd.NA, pd.NA]
     else:
         if ',' in category_hints:
