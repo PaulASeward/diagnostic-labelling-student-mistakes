@@ -195,7 +195,8 @@ def set_task_options(selected_assignment_id):
      Input('scatter-plot', 'selectedData'),
      Input('dimension-reduction-technique', 'value'),
      Input('clustering-technique', 'value'),
-     Input('cluster-groups-dropdown', 'value')],
+     Input('cluster-groups-dropdown', 'value'),
+     Input('manual-selection_override-dropdown', 'value')],
     [State('course-dropdown', 'value'),
      State('assignment-dropdown', 'value'),
      State('task-checklist', 'value'),
@@ -204,7 +205,7 @@ def set_task_options(selected_assignment_id):
      State('manual-mistake-label-table', 'data'),
      State('manual-mistake-label-table', 'columns')]
 )
-def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, selected_course, selected_assignment, selected_tasks, selected_n_clusters, selected_clustering_technique, mistake_table_current_data, mistake_table_columns):
+def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, manual_override, selected_course, selected_assignment, selected_tasks, selected_n_clusters, selected_clustering_technique, mistake_table_current_data, mistake_table_columns):
     triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
 
     if triggered_id == 'generate-button':
@@ -253,6 +254,9 @@ def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_da
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'cluster-groups-dropdown':
         task_selector.on_cluster_config_selection(selected_clustering_technique, n_clusters)
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    elif triggered_id == 'manual-selection_override-dropdown':
+        task_selector.cluster_algorithm.use_manual_mistake_categories = manual_override
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update

@@ -111,7 +111,7 @@ class ClusterAlgorithm:
         self.cluster_algorithm = None
         self.optimal_n_clusters = None
         self.mistake_categories_dict = {}  # Dictionary of {name: embedding}
-        self.use_manual_mistake_categories = False
+        self.use_manual_mistake_categories = 0
         self.label_column = 'mistake_category_label'
         self.cluster_name_column = 'mistake_category_name'
 
@@ -119,16 +119,21 @@ class ClusterAlgorithm:
         input_data, valid_indices = load_input_data(X, col_name='category_hint_embedding', label_column=self.label_column)
         input_data_scaled = scale_data_to_array(input_data)
 
-        if self.use_manual_mistake_categories and self.mistake_categories_dict:
+        if self.use_manual_mistake_categories == 1 and self.mistake_categories_dict: # Use the provided manual category label as a suggestion to initialize Kmeans algorithm.
             category_names = list(self.mistake_categories_dict.keys())
             initial_centers = np.array([np.array(ast.literal_eval(value) if isinstance(value, str) else value) for value in (self.mistake_categories_dict[name] for name in category_names)])
 
-            # Use the provided manual category label as a suggestion to initialize Kmeans algorithm.
             self.cluster_algorithm = KMeans(n_clusters=len(initial_centers), init=initial_centers, n_init=1, **self.kwargs)
             predicted_categories = self.cluster_algorithm.fit_predict(input_data_scaled)
 
             X.loc[valid_indices, self.label_column] = predicted_categories
             return X
+        elif self.use_manual_mistake_categories == 2 and self.mistake_categories_dict:  # Sort data points to closest provided mistake label
+            category_names = list(self.mistake_categories_dict.keys())
+            initial_centers = np.array([np.array(ast.literal_eval(value) if isinstance(value, str) else value) for value in (self.mistake_categories_dict[name] for name in category_names)])
+            distance_to_centers = np.linalg.norm(input_data_scaled[:, np.newaxis] - initial_centers, axis=2)
+            closest_centers_indices = np.argmin(distance_to_centers, axis=1)
+            X.loc[valid_indices, self.label_column] = closest_centers_indices
 
         elif self.clustering_technique == 'KMeans':
             if self.n_clusters == -1:
@@ -162,7 +167,7 @@ class ClusterAlgorithm:
         if self.cluster_name_column not in X.columns:
             X[self.cluster_name_column] = np.nan
 
-        if self.use_manual_mistake_categories and self.mistake_categories_dict:
+        if self.use_manual_mistake_categories == 1 and self.mistake_categories_dict:
             category_names = list(self.mistake_categories_dict.keys())
             initial_centers = np.array([np.array(ast.literal_eval(value) if isinstance(value, str) else value) for value in (self.mistake_categories_dict[name] for name in category_names)])
 
@@ -171,6 +176,12 @@ class ClusterAlgorithm:
                 distances = np.linalg.norm(initial_centers - self.cluster_algorithm.cluster_centers_[mistake_category_idx], axis=1)
                 closest_category = list(self.mistake_categories_dict.keys())[np.argmin(distances)]  # Find the closest manual category by embedding distance
                 X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = closest_category
+            return X
+
+        if self.use_manual_mistake_categories == 2 and self.mistake_categories_dict:
+            category_names = list(self.mistake_categories_dict.keys())
+            # Assuming X[self.label_column] contains indices corresponding to category_names
+            X[self.cluster_name_column] = X[self.label_column].apply(lambda idx: category_names[idx])
             return X
 
         self.mistake_categories_dict = {}

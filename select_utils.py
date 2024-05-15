@@ -50,7 +50,7 @@ class TaskSelector:
         set_existing_categories = set(existing_categories)
         n_clusters = len(manual_categories)
 
-        if manual_categories and set_manual_categories != set_existing_categories and n_clusters > 0:
+        if manual_categories and set_manual_categories != set_existing_categories and n_clusters > 0 and self.cluster_algorithm.use_manual_mistake_categories > 0:
             self.cluster_algorithm.n_clusters = n_clusters
             new_mistake_categories_dict = {}
 
@@ -60,7 +60,6 @@ class TaskSelector:
                 else:
                     new_mistake_categories_dict[manual_category] = self.cluster_algorithm.mistake_categories_dict[manual_category]  # Reuse calculated embedding
 
-            self.cluster_algorithm.use_manual_mistake_categories = True
             self.cluster_algorithm.mistake_categories_dict = new_mistake_categories_dict
 
     def load_task(self):
