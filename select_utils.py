@@ -23,7 +23,7 @@ class TaskSelector:
         self.dimension_reduction_technique = 'PCA'
         self.df_with_category_embeddings = None
         self.category_embedding_array = None
-        self.common_mistake_categories = {}
+        self.mistake_category_names = None
 
         columns_to_add = ['category_hints', 'category_hint_idx', 'category_hint_1', 'category_hint_1_embedding', 'category_hint_2', 'category_hint_2_embedding', 'category_hint_3', 'category_hint_3_embedding']
         changes_made = False
@@ -40,20 +40,28 @@ class TaskSelector:
         return self.df_feedback[[id_column, title_column]].drop_duplicates().set_index(id_column)[title_column].to_dict()
 
     def on_cluster_config_selection(self, clustering_technique='KMeans', n_clusters=5):
-        self.cluster_algorithm.clustering_technique = clustering_technique
-        self.cluster_algorithm.n_clusters = n_clusters
+        self.cluster_algorithm.clustering_technique = clustering_technique if clustering_technique else 'KMeans'
+        self.cluster_algorithm.n_clusters = n_clusters if n_clusters else 5
 
-    def on_manually_added_mistake_category_selection(self, mistake_categories):
-        n_clusters = len(mistake_categories)
-        if self.common_mistake_categories and self.common_mistake_categories != mistake_categories and n_clusters > 0:
+    def on_manual_categories_selection(self, mistake_table_current_data):
+        manual_categories = [row['option'] for row in mistake_table_current_data]
+        set_manual_categories = set(manual_categories)
+        existing_categories = self.cluster_algorithm.mistake_categories_dict.keys()
+        set_existing_categories = set(existing_categories)
+        n_clusters = len(manual_categories)
 
-            for mistake_category in mistake_categories:
-                if mistake_category not in self.common_mistake_categories:
-                    self.common_mistake_categories[mistake_category] = calculate_embedding(mistake_category)
-
-            self.cluster_algorithm.manual_mistake_categories = self.common_mistake_categories
-            self.cluster_algorithm.use_manual_mistake_categories = True
+        if manual_categories and set_manual_categories != set_existing_categories and n_clusters > 0:
             self.cluster_algorithm.n_clusters = n_clusters
+            new_mistake_categories_dict = {}
+
+            for manual_category in manual_categories:
+                if manual_category not in set_existing_categories:
+                    new_mistake_categories_dict[manual_category] = calculate_embedding(manual_category)
+                else:
+                    new_mistake_categories_dict[manual_category] = self.cluster_algorithm.mistake_categories_dict[manual_category]  # Reuse calculated embedding
+
+            self.cluster_algorithm.use_manual_mistake_categories = True
+            self.cluster_algorithm.mistake_categories_dict = new_mistake_categories_dict
 
     def load_task(self):
         self.selected_df = self.df_feedback[(self.df_feedback['course_id'] == self.selections['course']) & (self.df_feedback['assignment_id'] == self.selections['assignment']) & (self.df_feedback['task_id'].isin(self.selections['tasks']))]
@@ -165,6 +173,6 @@ class TaskSelector:
 # ts.selections['assignment'] = 1539
 # ts.selections['tasks'] = [1128]
 # ts.on_task_selection()
-# ts.cluster_and_categorize()
+# ts.on_clustering_request()
 
 

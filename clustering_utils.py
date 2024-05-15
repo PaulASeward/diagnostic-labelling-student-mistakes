@@ -16,7 +16,7 @@ def available_clustering_techniques():
     A list of dictionaries, where each dictionary has 'label' and 'value' keys.
     """
     techniques = {
-        'KMeans': 'KMeans - K-Means Clustering using Euclidean distance',
+        'KMeans': 'KMeans (Default) - K-Means Clustering using Euclidean distance',
         'DBSCAN': 'DBSCAN - Density-Based Spatial Clustering of Applications with Noise',
     }
     return [{'label': value, 'value': key} for key, value in techniques.items()]
@@ -87,7 +87,7 @@ def load_input_data(df, col_name, label_column='mistake_category_label'):
     return input_data.tolist(), valid_indices
 
 
-def calculate_centroid_name(df):
+def calculate_centroid(df):
     try:
         data = df['category_hint_embedding'].apply(eval if isinstance(df['category_hint_embedding'].iloc[0], str) else lambda x: x)
         data_ls = data.tolist()
@@ -96,12 +96,11 @@ def calculate_centroid_name(df):
 
         # centroid = np.mean(np.stack(df['category_hint_embedding'].tolist()), axis=0)
         # Find the closest data point to this centroid
-        closest_idx = df['category_hint_embedding'].apply(
-            lambda x: np.linalg.norm(np.array(eval(x) if isinstance(x, str) else x) - centroid)).idxmin()
-        return df.loc[closest_idx, 'category_hint']
+        closest_idx = df['category_hint_embedding'].apply(lambda x: np.linalg.norm(np.array(eval(x) if isinstance(x, str) else x) - centroid)).idxmin()
+        return df.loc[closest_idx, 'category_hint'], df.loc[closest_idx, 'category_hint_embedding']
     except Exception as e:
         print(f"Error computing centroid or finding closest point: {e}")
-        return "Unnamed Cluster"  # Default name if something goes wrong
+        return "Unnamed Cluster", None  # Default name if something goes wrong
 
 
 class ClusterAlgorithm:
@@ -111,7 +110,7 @@ class ClusterAlgorithm:
         self.kwargs = kwargs
         self.cluster_algorithm = None
         self.optimal_n_clusters = None
-        self.manual_mistake_categories = None  # Dictionary of {name: embedding}
+        self.mistake_categories_dict = {}  # Dictionary of {name: embedding}
         self.use_manual_mistake_categories = False
         self.label_column = 'mistake_category_label'
         self.cluster_name_column = 'mistake_category_name'
@@ -120,15 +119,14 @@ class ClusterAlgorithm:
         input_data, valid_indices = load_input_data(X, col_name='category_hint_embedding', label_column=self.label_column)
         input_data_scaled = scale_data_to_array(input_data)
 
-        if self.use_manual_mistake_categories and self.manual_mistake_categories:
-            category_names = list(self.manual_mistake_categories.keys())
-            initial_centers = np.stack([self.manual_mistake_categories[name] for name in category_names])
+        if self.use_manual_mistake_categories and self.mistake_categories_dict:
+            category_names = list(self.mistake_categories_dict.keys())
+            initial_centers = np.array([np.array(ast.literal_eval(value) if isinstance(value, str) else value) for value in (self.mistake_categories_dict[name] for name in category_names)])
+
+            # Use the provided manual category label as a suggestion to initialize Kmeans algorithm.
             self.cluster_algorithm = KMeans(n_clusters=len(initial_centers), init=initial_centers, n_init=1, **self.kwargs)
-
-            # closest_category_indices = np.argmin(np.linalg.norm(initial_centers[:, np.newaxis] - input_data_scaled, axis=2), axis=0)
-            # X.loc[valid_indices, self.label_column] = closest_category_indices  # Preliminary labeling
-
             predicted_categories = self.cluster_algorithm.fit_predict(input_data_scaled)
+
             X.loc[valid_indices, self.label_column] = predicted_categories
             return X
 
@@ -164,23 +162,29 @@ class ClusterAlgorithm:
         if self.cluster_name_column not in X.columns:
             X[self.cluster_name_column] = np.nan
 
+        if self.use_manual_mistake_categories and self.mistake_categories_dict:
+            category_names = list(self.mistake_categories_dict.keys())
+            initial_centers = np.array([np.array(ast.literal_eval(value) if isinstance(value, str) else value) for value in (self.mistake_categories_dict[name] for name in category_names)])
+
+            for i, mistake_category_idx in enumerate(X[self.label_column].unique()):
+                # This does not create clusters, but rather instead sorts the points to the closest provided label.
+                distances = np.linalg.norm(initial_centers - self.cluster_algorithm.cluster_centers_[mistake_category_idx], axis=1)
+                closest_category = list(self.mistake_categories_dict.keys())[np.argmin(distances)]  # Find the closest manual category by embedding distance
+                X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = closest_category
+            return X
+
+        self.mistake_categories_dict = {}
         for i, mistake_category_idx in enumerate(X[self.label_column].unique()):
             mistake_category_df = X[X[self.label_column] == mistake_category_idx]
 
-            if self.use_manual_mistake_categories and self.manual_mistake_categories:
-                # Find the closest manual category by embedding distance
-                embeddings = np.array([self.manual_mistake_categories[name] for name in self.manual_mistake_categories])
-                distances = np.linalg.norm(embeddings - self.cluster_algorithm.cluster_centers_[mistake_category_idx], axis=1)
-                closest_category = list(self.manual_mistake_categories.keys())[np.argmin(distances)]
-                X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = closest_category
+            if not mistake_category_df['category_hint'].mode().empty:  # Find most common mistake category name
+
+                mistake_category_name = mistake_category_df['category_hint'].mode()[0]
+                mistake_category_embedding = mistake_category_df[mistake_category_df['category_hint'] == mistake_category_name]['category_hint_embedding'].iloc[0]
             else:
+                mistake_category_name, mistake_category_embedding = calculate_centroid(mistake_category_df)
 
-                # Find most common mistake category name
-                if not mistake_category_df['category_hint'].mode().empty:
-                    mistake_category_name = mistake_category_df['category_hint'].mode()[0]
-                else:
-                    mistake_category_name = calculate_centroid_name(mistake_category_df)
-
-                X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = mistake_category_name
+            self.mistake_categories_dict[mistake_category_name] = mistake_category_embedding
+            X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = mistake_category_name
 
         return X

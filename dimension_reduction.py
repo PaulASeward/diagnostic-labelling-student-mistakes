@@ -12,7 +12,7 @@ def available_dimension_reduction_techniques():
     A list of dictionaries, where each dictionary has 'label' and 'value' keys.
     """
     techniques = {
-        'PCA': 'PCA - Principal Component Analysis',
+        'PCA': 'PCA (Default) - Principal Component Analysis',
         't-SNE': 't-SNE - t-Distributed Stochastic Neighbor Embedding',
         'MDS': 'MDS - Multi-Dimensional Scaling',
         'Isomap': 'Isomap - Isometric Mapping',

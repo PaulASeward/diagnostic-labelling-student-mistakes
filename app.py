@@ -91,7 +91,7 @@ app.layout = html.Div([
                      {'label': '1', 'value': 1},
                      {'label': '2', 'value': 2},
                      {'label': '3', 'value': 3},
-                     {'label': '4', 'value': 4},
+                     {'label': '4 (Default)', 'value': 4},
                      {'label': '5', 'value': 5},
                      {'label': '6', 'value': 6},
                      {'label': '7', 'value': 7},
@@ -101,8 +101,39 @@ app.layout = html.Div([
 
                 ],
             ),
+        ], style={'width': '25%', 'padding-right': '8px'}),
+        html.Div([
+            dcc.Dropdown(
+                id='manual-selection_override-dropdown',
+                placeholder="Allow Manual Overrides of Category Labels",
+                options=[
+                    {'label': 'Auto (Default): Labels and Clustered are automatically generated', 'value': 0},
+                     {'label': 'Manual Label Suggestion: Cluster algorithms are initialized with suggested center.', 'value': 1},
+                     {'label': 'Manual Label Override: No clustering: Closest mistake label is selected (Euclidean distance).', 'value': 2},
+                ],
+            ),
         ], style={'width': '25%', 'padding-right': '0px'})
-    ], style={'display': 'flex', 'flexGrow': '1', 'gap': '0px'}),
+    ], style={'display': 'flex', 'flexGrow': '1', 'gap': '8px'}),
+    html.Div([
+        html.Button('Add Category', id='adding-rows-button', n_clicks=0),
+        dash_table.DataTable(
+            id='manual-mistake-label-table',
+            columns=[
+                {'name': 'Mistake Category', 'id': 'option', 'editable': True}
+            ],
+            data=[],
+            editable=True,
+            row_deletable=True,
+            style_table={'width': '33%', 'minWidth': '33%'},
+            style_header={'fontWeight': 'bold', 'backgroundColor': '#f3f3f3'},
+            style_cell={
+                'fontFamily': 'Arial, sans-serif',
+                'fontSize': '14px',
+                'textAlign': 'left',
+                'padding': '10px',
+            },
+        ),
+    ], style={'margin-bottom': '20px'}),
     html.Div([
         html.Div([
             dcc.Graph(id='scatter-plot', hoverData=None),
@@ -154,28 +185,13 @@ def set_task_options(selected_assignment_id):
 
 
 @app.callback(
-    Output('dummy-output', 'children'),
-    Input('load-button', 'n_clicks'),
-    [State('course-dropdown', 'value'),
-     State('assignment-dropdown', 'value'),
-     State('task-checklist', 'value')]
-)
-def choose_tasks(n_clicks, selected_course, selected_assignment, selected_tasks):
-    triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
-
-    if triggered_id == 'load-button':
-        if n_clicks > 0:
-            if selected_tasks != task_selector.selections['tasks']:  # New tasks are selected
-                task_selector.selections['tasks'] = selected_tasks
-                task_selector.on_task_selection()
-    return dash.no_update
-
-
-@app.callback(
-    [Output('scatter-plot', 'figure'),
+    [Output('manual-mistake-label-table', 'data'),
+     Output('scatter-plot', 'figure'),
      Output('pie_fig', 'figure'),
      Output('table-feedback', 'data')],
-    [Input('generate-button', 'n_clicks'),
+    [Input('adding-rows-button', 'n_clicks'),
+     Input('generate-button', 'n_clicks'),
+     Input('load-button', 'n_clicks'),
      Input('scatter-plot', 'selectedData'),
      Input('dimension-reduction-technique', 'value'),
      Input('clustering-technique', 'value'),
@@ -185,44 +201,61 @@ def choose_tasks(n_clicks, selected_course, selected_assignment, selected_tasks)
      State('task-checklist', 'value'),
      State('cluster-groups-dropdown', 'value'),
      State('clustering-technique', 'value'),
-     ]
+     State('manual-mistake-label-table', 'data'),
+     State('manual-mistake-label-table', 'columns')]
 )
-def update_dashboard(n_clicks, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, selected_course, selected_assignment, selected_tasks, selected_n_clusters, selected_clustering_technique):
+def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, selected_course, selected_assignment, selected_tasks, selected_n_clusters, selected_clustering_technique, mistake_table_current_data, mistake_table_columns):
     triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
 
     if triggered_id == 'generate-button':
-        if n_clicks > 0:
+        if n_clicks_generate > 0:
+            if mistake_table_current_data and len(mistake_table_current_data) > 0:
+                task_selector.on_manual_categories_selection(mistake_table_current_data)
+
             task_selector.on_clustering_request()
             task_selector.on_dim_reduction_request()
 
             fig1 = go.Figure()
             pie_fig = go.Figure()
             initial_table_data = []
+            suggested_mistake_categories = [{'option': name} for name in task_selector.cluster_algorithm.mistake_categories_dict.keys()]
 
             if not task_selector.df_with_category_embeddings.empty:
                 fig1 = build_scatter_plot_with_mistake_category_trace(task_embeddings_df=task_selector.df_with_category_embeddings, embedding_type_prefix='category_hint')
                 pie_fig = plot_mistake_statistics(task_selector.df_with_category_embeddings)
 
-            return fig1, pie_fig, initial_table_data
+            return suggested_mistake_categories, fig1, pie_fig, initial_table_data
+
+    elif triggered_id == 'adding-rows-button':
+        if n_clicks_add > 0:
+            mistake_table_current_data.append({c['id']: '' for c in mistake_table_columns})
+        return mistake_table_current_data, dash.no_update, dash.no_update, dash.no_update
+
+    elif triggered_id == 'load-button':
+        if n_clicks_load > 0:
+            if selected_tasks != task_selector.selections['tasks']:  # New tasks are selected
+                task_selector.selections['tasks'] = selected_tasks
+                task_selector.on_task_selection()
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     elif triggered_id == 'scatter-plot':
         if not selected_data:
             raise PreventUpdate
         selected_points_indices = [(point['customdata']['student_id'], point['customdata']['category_hint_idx']) for point in selected_data['points']]
         updated_table_data = update_table(selected_points_indices, task_selector.df_with_category_embeddings)
-        return dash.no_update, dash.no_update, updated_table_data
+        return dash.no_update, dash.no_update, dash.no_update, updated_table_data
 
     elif triggered_id == 'dimension-reduction-technique':
         task_selector.dimension_reduction_technique = dimension_reduction_technique
-        return dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'clustering-technique':
         task_selector.on_cluster_config_selection(clustering_technique, selected_n_clusters)
-        return dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'cluster-groups-dropdown':
         task_selector.on_cluster_config_selection(selected_clustering_technique, n_clusters)
-        return dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
-    return dash.no_update, dash.no_update, dash.no_update
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 
 if __name__ == '__main__':
