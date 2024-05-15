@@ -90,11 +90,7 @@ def load_input_data(df, col_name, label_column='mistake_category_label'):
 def calculate_centroid(df):
     try:
         data = df['category_hint_embedding'].apply(eval if isinstance(df['category_hint_embedding'].iloc[0], str) else lambda x: x)
-        data_ls = data.tolist()
-        data_stack = np.stack(data_ls)
-        centroid = np.mean(data_stack, axis=0)
-
-        # centroid = np.mean(np.stack(df['category_hint_embedding'].tolist()), axis=0)
+        centroid = np.mean(np.stack(data.tolist()), axis=0)
         # Find the closest data point to this centroid
         closest_idx = df['category_hint_embedding'].apply(lambda x: np.linalg.norm(np.array(eval(x) if isinstance(x, str) else x) - centroid)).idxmin()
         return df.loc[closest_idx, 'category_hint'], df.loc[closest_idx, 'category_hint_embedding']

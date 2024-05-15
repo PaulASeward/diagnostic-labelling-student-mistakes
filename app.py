@@ -271,7 +271,8 @@ def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_da
         task_selector.cluster_algorithm.use_manual_mistake_categories = manual_override
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'mistake-selection-mode':
-        task_selector.allow_multiple_mistake_labels = True if mistake_selection == 'multiple' else False
+        print("Number of Student Mistakes", mistake_selection)
+        task_selector.number_mistake_labels = 3 if mistake_selection == 'multiple' else 1
 
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
