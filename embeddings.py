@@ -39,10 +39,13 @@ def clean_category_hints(category_hints):
             items = category_hints.split(',')
         elif '\n' in category_hints:
             items = category_hints.split('\n')
-        else:
+        elif '1' in category_hints:
             # Try splitting by numbered items pattern (e.g., "1. Item1 2. Item2")
             items = re.split(r'\d+\.\s*', category_hints)
             items = [item for item in items if item.strip()]
+        else:
+            print("No Splitting Separator found in: ", category_hints)
+            items = [category_hints]
 
             # Strip whitespace and slice to get at most the first three items
         selected_items = [item.strip() if item.strip() != 'None' or item.strip() != 'N/A' else pd.NA for item in items[:3]]
