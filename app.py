@@ -70,7 +70,18 @@ app.layout = html.Div([
                             options=available_clustering_techniques(),
                             placeholder="Select a Clustering Technique"
                         ),
-                    ], style={'flexShrink': '1', 'minWidth': '0', 'width': '100%'})
+                    ], style={'flexShrink': '1', 'minWidth': '0', 'width': '100%'}),
+                    html.Div([
+                        dcc.RadioItems(
+                            id='mistake-selection-mode',
+                            options=[
+                                {'label': 'Single Mistake Label', 'value': 'single'},
+                                {'label': 'Multiple Mistake Labels', 'value': 'multiple'}
+                            ],
+                            value='multiple',
+                            labelStyle={'display': 'inline-block'}
+                        )
+                    ], style={'flexShrink': '1', 'minWidth': '0', 'width': '100%'}),
                 ]
             ),
         ]
@@ -196,7 +207,8 @@ def set_task_options(selected_assignment_id):
      Input('dimension-reduction-technique', 'value'),
      Input('clustering-technique', 'value'),
      Input('cluster-groups-dropdown', 'value'),
-     Input('manual-selection_override-dropdown', 'value')],
+     Input('manual-selection_override-dropdown', 'value'),
+     Input('mistake-selection-mode', 'value')],
     [State('course-dropdown', 'value'),
      State('assignment-dropdown', 'value'),
      State('task-checklist', 'value'),
@@ -205,7 +217,7 @@ def set_task_options(selected_assignment_id):
      State('manual-mistake-label-table', 'data'),
      State('manual-mistake-label-table', 'columns')]
 )
-def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, manual_override, selected_course, selected_assignment, selected_tasks, selected_n_clusters, selected_clustering_technique, mistake_table_current_data, mistake_table_columns):
+def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, manual_override, mistake_selection, selected_course, selected_assignment, selected_tasks, selected_n_clusters, selected_clustering_technique, mistake_table_current_data, mistake_table_columns):
     triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
 
     if triggered_id == 'generate-button':
@@ -258,6 +270,8 @@ def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_da
     elif triggered_id == 'manual-selection_override-dropdown':
         task_selector.cluster_algorithm.use_manual_mistake_categories = manual_override
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    elif triggered_id == 'mistake-selection-mode':
+        task_selector.allow_multiple_mistake_labels = True if mistake_selection == 'multiple' else False
 
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 

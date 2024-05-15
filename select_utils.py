@@ -24,6 +24,7 @@ class TaskSelector:
         self.df_with_category_embeddings = None
         self.category_embedding_array = None
         self.mistake_category_names = None
+        self.allow_multiple_mistake_labels = True
 
         columns_to_add = ['category_hints', 'category_hint_idx', 'category_hint_1', 'category_hint_1_embedding', 'category_hint_2', 'category_hint_2_embedding', 'category_hint_3', 'category_hint_3_embedding']
         changes_made = False
@@ -138,7 +139,8 @@ class TaskSelector:
         new_df_rows = []
 
         for _, row in self.selected_df.iterrows():
-            for i in range(1, 4):  # Generate three new rows for each category hint
+            number_of_mistakes = 3 if self.allow_multiple_mistake_labels else 1
+            for i in range(1, number_of_mistakes+1):  # Generate up to three new rows for each category hint depending on the number of mistakes allowed
                 # Only create new row if there is a category hint and embedding
                 if not pd.isna(row[f'category_hint_{i}']) and not pd.isna(row[f'category_hint_{i}_embedding']):
                     new_row = row.copy()
