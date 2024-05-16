@@ -59,7 +59,7 @@ def build_scatter_plot_with_mistake_category_trace(task_embeddings_df, mistake_c
             name=mistake_category_df[CATEGORY_NAME_COL].iloc[0], text=mistake_category_df[TEXT_COL], customdata=custom_data, hoverinfo='text+name'
         ))
 
-    fig.update_layout(xaxis_title='Principal Component 1', yaxis_title='Principal Component 2', clickmode='event+select', width=1200, height=800,
+    fig.update_layout(xaxis_title='Principal Component 1', yaxis_title='Principal Component 2', clickmode='event+select', width=1200, height=750,
                       title={'text': title,'y': 0.9,'x': 0.5,'xanchor': 'center','yanchor': 'top','font': {'size': 20, 'color': 'black', 'family': "Arial"}},
                       legend=dict(title=dict(text='Mistake Category', side='top')))
     return fig
@@ -76,16 +76,12 @@ def plot_mistake_statistics(task_embeddings_df, mistake_categories_dict, color_m
     Returns:
         figure: The pie chart figure.
     """
-    # Convert the CATEGORY_NAME_COL to a categorical type with the defined order
-    category_order = task_embeddings_df.sort_values(by=CATEGORY_IDX_COL).drop_duplicates(subset=[CATEGORY_IDX_COL])[CATEGORY_NAME_COL].tolist()
-    task_embeddings_df[CATEGORY_NAME_COL] = pd.Categorical(task_embeddings_df[CATEGORY_NAME_COL], categories=category_order, ordered=True)
-
     df_count = task_embeddings_df.groupby([CATEGORY_NAME_COL]).size().reset_index(name='count')
 
     # Generate Pie Chart
-    pie_fig = px.pie(df_count, names=CATEGORY_NAME_COL, values='count', title='Distribution of Student Mistakes (Pie Chart)', color=CATEGORY_NAME_COL, color_discrete_map=color_map, hole=.3)
+    pie_fig = px.pie(df_count, names=CATEGORY_NAME_COL, values='count', title='Stemblytics Student Mistake Breakdown', color=CATEGORY_NAME_COL, color_discrete_map=color_map, hole=.2)
     pie_fig.update_traces(textposition='inside', textinfo='percent+label')
-    pie_fig.update_layout(width=800, height=800)
+    pie_fig.update_layout(width=750, height=750, showlegend=False)
 
     return pie_fig
 

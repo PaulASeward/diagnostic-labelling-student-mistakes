@@ -148,11 +148,11 @@ app.layout = html.Div([
     html.Div([
         html.Div([
             dcc.Graph(id='scatter-plot', hoverData=None),
-        ], style={'flex': '1', 'min-width': '0', 'width': '66%', 'padding-left': '0px'}),  # Adjust padding-left as needed
+        ], style={'flex': '1', 'min-width': '0', 'width': '70%', 'padding-right': '2px'}),
         html.Div([
             dcc.Graph(id='pie_fig'),
-        ], style={'flex': '1', 'min-width': '0', 'padding-right': '0px'}),  # Adjust padding-right as needed
-    ], style={'display': 'flex', 'flexGrow': '1', 'gap': '0px'}),
+        ], style={'flex': '1', 'min-width': '0', 'padding-left': '4px'}),
+    ], style={'display': 'flex', 'flexGrow': '1', 'gap': '150px'}),
     dash_table.DataTable(
         id='table-feedback',
         columns=[
