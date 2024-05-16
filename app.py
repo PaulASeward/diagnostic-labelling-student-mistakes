@@ -63,14 +63,14 @@ app.layout = html.Div([
                             options=available_dimension_reduction_techniques(),
                             placeholder="Select a Dimension Reduction Technique"
                         ),
-                    ], style={'flexShrink': '1', 'minWidth': '0', 'width': '100%'}),
+                    ], style={'flexShrink': '1', 'minWidth': '0', 'width': '100%', 'padding-top': '4px', 'padding-bottom': '6px'}),
                     html.Div([
                         dcc.Dropdown(
                             id='clustering-technique',
                             options=available_clustering_techniques(),
                             placeholder="Select a Clustering Technique"
                         ),
-                    ], style={'flexShrink': '1', 'minWidth': '0', 'width': '100%'}),
+                    ], style={'flexShrink': '1', 'minWidth': '0', 'width': '100%', 'padding-top': '4px', 'padding-bottom': '6px'}),
                     html.Div([
                         dcc.RadioItems(
                             id='mistake-selection-mode',
@@ -81,7 +81,7 @@ app.layout = html.Div([
                             value='multiple',
                             labelStyle={'display': 'inline-block'}
                         )
-                    ], style={'flexShrink': '1', 'minWidth': '0', 'width': '100%'}),
+                    ], style={'flexShrink': '1', 'minWidth': '0', 'width': '100%', 'padding-top': '8px', 'padding-bottom': '6px'}),
                 ]
             ),
         ]
@@ -153,6 +153,9 @@ app.layout = html.Div([
             dcc.Graph(id='pie_fig'),
         ], style={'flex': '1', 'min-width': '0', 'padding-right': '0px'}),  # Adjust padding-right as needed
     ], style={'display': 'flex', 'flexGrow': '1', 'gap': '0px'}),
+    html.Div([
+        dcc.Graph(id='dendro_fig'),
+    ], style={'margin-bottom': '20px'}),
     dash_table.DataTable(
         id='table-feedback',
         columns=[
@@ -199,6 +202,7 @@ def set_task_options(selected_assignment_id):
     [Output('manual-mistake-label-table', 'data'),
      Output('scatter-plot', 'figure'),
      Output('pie_fig', 'figure'),
+     Output('dendro_fig', 'figure'),
      Output('table-feedback', 'data')],
     [Input('adding-rows-button', 'n_clicks'),
      Input('generate-button', 'n_clicks'),
@@ -237,46 +241,46 @@ def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_da
             if not task_selector.df_with_category_embeddings.empty:
                 fig1 = build_scatter_plot_with_mistake_category_trace(task_selector.df_with_category_embeddings, task_selector.cluster_algorithm.mistake_categories_dict)
                 pie_fig = plot_mistake_statistics(task_selector.df_with_category_embeddings, task_selector.cluster_algorithm.mistake_categories_dict)
-                # dendro_fig = plot_dendrogram(task_selector.df_with_category_embeddings)
+                dendro_fig = plot_dendrogram(task_selector.df_with_category_embeddings, task_selector.cluster_algorithm.mistake_categories_dict)
 
-            return suggested_mistake_categories, fig1, pie_fig, initial_table_data
+            return suggested_mistake_categories, fig1, pie_fig, dendro_fig, initial_table_data
 
     elif triggered_id == 'adding-rows-button':
         if n_clicks_add > 0:
             mistake_table_current_data.append({c['id']: '' for c in mistake_table_columns})
-        return mistake_table_current_data, dash.no_update, dash.no_update, dash.no_update
+        return mistake_table_current_data, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     elif triggered_id == 'load-button':
         if n_clicks_load > 0:
             if selected_tasks != task_selector.selections['tasks']:  # New tasks are selected
                 task_selector.selections['tasks'] = selected_tasks
                 task_selector.on_task_selection()
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     elif triggered_id == 'scatter-plot':
         if not selected_data:
             raise PreventUpdate
         selected_points_indices = [(point['customdata']['student_id'], point['customdata']['category_hint_idx']) for point in selected_data['points']]
-        updated_table_data = update_table(selected_points_indices, task_selector.df_with_category_embeddings)
-        return dash.no_update, dash.no_update, dash.no_update, updated_table_data
+        updated_table_data = task_selector.update_table(selected_points_indices, task_selector.df_with_category_embeddings)
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, updated_table_data
 
     elif triggered_id == 'dimension-reduction-technique':
         task_selector.dimension_reduction_technique = dimension_reduction_technique
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'clustering-technique':
         task_selector.on_cluster_config_selection(clustering_technique, selected_n_clusters)
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'cluster-groups-dropdown':
         task_selector.on_cluster_config_selection(selected_clustering_technique, n_clusters)
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'manual-selection_override-dropdown':
         task_selector.cluster_algorithm.use_manual_mistake_categories = manual_override
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'mistake-selection-mode':
         print("Number of Student Mistakes", mistake_selection)
         task_selector.number_mistake_labels = 3 if mistake_selection == 'multiple' else 1
 
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 
 if __name__ == '__main__':

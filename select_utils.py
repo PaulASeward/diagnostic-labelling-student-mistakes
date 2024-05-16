@@ -75,6 +75,14 @@ class TaskSelector:
             self.expand_df()
         return None
 
+    def update_table(self, current_selection_indices, task_embeddings_df):
+        filtered_df = task_embeddings_df[task_embeddings_df.apply(
+            lambda row: (row['student_id'], row['category_hint_idx']) in current_selection_indices, axis=1)]
+        filtered_df['formatted_grade'] = filtered_df.apply(lambda row: f"[{(row['grade'] * 100):.2f}%](https://app.stemble.ca/web/courses/{row['course_id']}/assignments/{row['assignment_id']}/marking/{row['student_id']}/tasks/{row['task_id']})", axis=1)
+        filtered2_df = filtered_df[['mistake_category_name', 'category_hint', 'ta_feedback_text', 'category_hints', 'formatted_grade']]
+        data_to_display = filtered2_df.to_dict('records')
+        return data_to_display
+
     def on_category_hint_generation(self):
         if not self.selected_df.empty:
             missing_category_hint = self.selected_df['category_hints'].isna()
