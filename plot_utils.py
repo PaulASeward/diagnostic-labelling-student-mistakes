@@ -11,9 +11,6 @@ CATEGORY_IDX_COL = 'mistake_category_label'
 TEXT_COL = "category_hint"
 
 
-# dendro = ff.create_dendrogram(embeddings, orientation='left', labels=label_names, colorscale=list(color_map.values()), linkagefun=lambda x: linkage(x, 'ward', optimal_ordering=True))
-
-
 def create_color_map(task_embeddings_df, mistake_categories_dict, color_palette=COLOR_PALETTE):
     sorted_indices = sorted(task_embeddings_df[CATEGORY_IDX_COL].unique())
     color_map = {}
@@ -97,19 +94,31 @@ def plot_dendrogram(task_embeddings_df, mistake_categories_dict, color_map):
     """
     embeddings_columns = ['reduced_category_hint_embedding_1', 'reduced_category_hint_embedding_2']
     embeddings = task_embeddings_df[embeddings_columns].values
+    print("Embeddings: ", embeddings)
 
-    label_names = task_embeddings_df[CATEGORY_NAME_COL].values
-    label_idx = task_embeddings_df[CATEGORY_IDX_COL].values
+    # label_idx = task_embeddings_df[CATEGORY_IDX_COL].values
+    label_names = task_embeddings_df[TEXT_COL].values
+    print("Label Names:", label_names)
 
-    # Create the dendrogram with colors
-    dendro = ff.create_dendrogram(embeddings, orientation='left', labels=label_names)
+    # dendro = ff.create_dendrogram(embeddings)
+    dendro = ff.create_dendrogram(embeddings, labels=label_names.tolist(), orientation='left', linkagefun=lambda x: linkage(embeddings, 'ward', optimal_ordering=True))
+
+    print("First Dendrogram Trace: ")
+    print(dendro['data'][0])  # Print the first trace to see its structure, especially the x-axis labels
 
     fig = go.Figure(data=dendro['data'])
+
+    fig.update_layout(
+        yaxis=dict(
+            tickmode='array',
+            tickvals=[-i*10 for i in range(len(label_names))],
+            ticktext=label_names
+        )
+    )
     fig.update_layout(title_text='Student Mistake Categories Dendrogram',
+                      yaxis=dict(title='Student Mistake Label'),
                       xaxis=dict(title='Distance'),
-                      # yaxis=dict(title='Student Mistake Label'),
-                      yaxis=dict(title='Student Mistake Label', ticktext=label_names),
-                      width=1200, height=1200, margin=dict(l=200))
+                      width=1200, height=1600)
 
     return fig
 
