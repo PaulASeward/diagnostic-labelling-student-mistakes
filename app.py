@@ -153,9 +153,6 @@ app.layout = html.Div([
             dcc.Graph(id='pie_fig'),
         ], style={'flex': '1', 'min-width': '0', 'padding-right': '0px'}),  # Adjust padding-right as needed
     ], style={'display': 'flex', 'flexGrow': '1', 'gap': '0px'}),
-    html.Div([
-        dcc.Graph(id='dendro_fig'),
-    ], style={'margin-bottom': '20px'}),
     dash_table.DataTable(
         id='table-feedback',
         columns=[
@@ -176,6 +173,9 @@ app.layout = html.Div([
         style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': 'rgb(248, 248, 248)'},
                                 {'if': {'column_id': 'ta_feedback_text'}, 'textAlign': 'left', 'padding': '15px', 'fontSize': '16px', 'minWidth': '300px', 'width': '40%', 'maxWidth': '600px'}]
     ),
+    html.Div([
+        dcc.Graph(id='dendro_fig'),
+    ], style={'margin-bottom': '20px'}),
     html.Div(id='dummy-output', style={'display': 'none'}),
 ])
 

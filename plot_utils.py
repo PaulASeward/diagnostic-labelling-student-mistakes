@@ -90,26 +90,21 @@ def plot_dendrogram(task_embeddings_df, mistake_categories_dict):
     embeddings_columns = ['reduced_category_hint_embedding_1', 'reduced_category_hint_embedding_2']
     color_map = create_color_map(task_embeddings_df, mistake_categories_dict)
     embeddings = task_embeddings_df[embeddings_columns].values
-    #label_names = task_embeddings_df[CATEGORY_NAME_COL].values
+
+    label_names = task_embeddings_df[CATEGORY_NAME_COL].values
     labels = task_embeddings_df[CATEGORY_IDX_COL].values
 
     # Compute the linkage matrix using Ward's method
-    linkage_matrix = linkage(embeddings, 'ward')
+    linkage_matrix = linkage(embeddings, 'ward', optimal_ordering=True)
 
     # Create the dendrogram with colors
     dendro = ff.create_dendrogram(linkage_matrix, orientation='left')
-    # for i, d in enumerate(dendro['data']):
-    #     # Update colors based on the labels of the dendrogram
-    #     dy = d['y']
-    #     df = task_embeddings_df.iloc[dy]
-    #     category_idx = df.mistake_category_label.values[0]
-    #     d['line']['color'] = color_map[category_idx]
 
     fig = go.Figure(data=dendro['data'])
-    fig.update_layout(title_text='Dendrogram of Student Mistakes with Color Coding',
-                      xaxis=dict(title='Euclidean Distance'),
-                      yaxis=dict(title='Student Mistakes'),
-                      width=800, height=800)
+    fig.update_layout(title_text='Student Mistake Categories Dendrogram',
+                      xaxis=dict(title='Distance'),
+                      yaxis=dict(title='Student Mistake Label'),
+                      width=1200, height=1200)
 
     return fig
 
