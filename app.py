@@ -102,8 +102,8 @@ app.layout = html.Div([
                      {'label': '1', 'value': 1},
                      {'label': '2', 'value': 2},
                      {'label': '3', 'value': 3},
-                     {'label': '4 (Default)', 'value': 4},
-                     {'label': '5', 'value': 5},
+                     {'label': '4', 'value': 4},
+                     {'label': '5 (Default)', 'value': 5},
                      {'label': '6', 'value': 6},
                      {'label': '7', 'value': 7},
                      {'label': '8', 'value': 8},
@@ -203,7 +203,11 @@ def set_task_options(selected_assignment_id):
      Output('scatter-plot', 'figure'),
      Output('pie_fig', 'figure'),
      Output('dendro_fig', 'figure'),
-     Output('table-feedback', 'data')],
+     Output('table-feedback', 'data'),
+     Output('dimension-reduction-technique', 'value'),
+     Output('clustering-technique', 'value'),
+     Output('cluster-groups-dropdown', 'value'),
+     Output('manual-selection_override-dropdown', 'value')],
     [Input('adding-rows-button', 'n_clicks'),
      Input('generate-button', 'n_clicks'),
      Input('load-button', 'n_clicks'),
@@ -227,7 +231,7 @@ def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_da
     if triggered_id == 'generate-button':
         if n_clicks_generate > 0:
             if mistake_table_current_data and len(mistake_table_current_data) > 0:
-                task_selector.on_manual_categories_selection(mistake_table_current_data)
+                manually_selected_categories = task_selector.on_manual_categories_selection(mistake_table_current_data)
 
             task_selector.on_clustering_request()
             task_selector.on_dim_reduction_request()
@@ -244,44 +248,43 @@ def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_da
                 pie_fig = plot_mistake_statistics(task_selector.df_with_category_embeddings, task_selector.cluster_algorithm.mistake_categories_dict, task_selector.color_map)
                 dendro_fig = plot_dendrogram(task_selector.df_with_category_embeddings, task_selector.cluster_algorithm.mistake_categories_dict, task_selector.color_map)
 
-            return suggested_mistake_categories, fig1, pie_fig, dendro_fig, initial_table_data
+            return suggested_mistake_categories, fig1, pie_fig, dendro_fig, initial_table_data, task_selector.dimension_reduction_technique, task_selector.cluster_algorithm.clustering_technique, task_selector.cluster_algorithm.n_clusters, task_selector.cluster_algorithm.use_manual_mistake_categories
 
     elif triggered_id == 'adding-rows-button':
         if n_clicks_add > 0:
             mistake_table_current_data.append({c['id']: '' for c in mistake_table_columns})
-        return mistake_table_current_data, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return mistake_table_current_data, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, len(mistake_table_current_data), dash.no_update
 
     elif triggered_id == 'load-button':
         if n_clicks_load > 0:
             if selected_tasks != task_selector.selections['tasks']:  # New tasks are selected
                 task_selector.selections['tasks'] = selected_tasks
                 task_selector.on_task_selection()
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     elif triggered_id == 'scatter-plot':
         if not selected_data:
             raise PreventUpdate
         selected_points_indices = [(point['customdata']['student_id'], point['customdata']['category_hint_idx']) for point in selected_data['points']]
         updated_table_data = task_selector.update_table(selected_points_indices, task_selector.df_with_category_embeddings)
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, updated_table_data
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, updated_table_data, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     elif triggered_id == 'dimension-reduction-technique':
         task_selector.dimension_reduction_technique = dimension_reduction_technique
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'clustering-technique':
         task_selector.on_cluster_config_selection(clustering_technique, selected_n_clusters)
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update if clustering_technique != 'DBSCAN' else 0
     elif triggered_id == 'cluster-groups-dropdown':
         task_selector.on_cluster_config_selection(selected_clustering_technique, n_clusters)
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'manual-selection_override-dropdown':
         task_selector.cluster_algorithm.use_manual_mistake_categories = manual_override
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, len(mistake_table_current_data), dash.no_update
     elif triggered_id == 'mistake-selection-mode':
-        print("Number of Student Mistakes", mistake_selection)
         task_selector.number_mistake_labels = 3 if mistake_selection == 'multiple' else 1
 
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 
 if __name__ == '__main__':

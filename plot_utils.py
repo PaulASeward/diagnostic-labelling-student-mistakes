@@ -94,18 +94,8 @@ def plot_dendrogram(task_embeddings_df, mistake_categories_dict, color_map):
     """
     embeddings_columns = ['reduced_category_hint_embedding_1', 'reduced_category_hint_embedding_2']
     embeddings = task_embeddings_df[embeddings_columns].values
-    print("Embeddings: ", embeddings)
-
-    # label_idx = task_embeddings_df[CATEGORY_IDX_COL].values
     label_names = task_embeddings_df[TEXT_COL].values
-    print("Label Names:", label_names)
-
-    # dendro = ff.create_dendrogram(embeddings)
     dendro = ff.create_dendrogram(embeddings, labels=label_names.tolist(), orientation='left', linkagefun=lambda x: linkage(embeddings, 'ward', optimal_ordering=True))
-
-    print("First Dendrogram Trace: ")
-    print(dendro['data'][0])  # Print the first trace to see its structure, especially the x-axis labels
-
     fig = go.Figure(data=dendro['data'])
 
     fig.update_layout(
