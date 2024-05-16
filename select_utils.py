@@ -18,11 +18,11 @@ class TaskSelector:
         self.selections = {'course': None, 'assignment': None, 'tasks': []}
         self.selected_df = None
         self.expanded_df = None
-        self.expanded = False
+        self.clustered_df = None
+        self.df_with_category_embeddings = None
+
         self.cluster_algorithm = ClusterAlgorithm('KMeans', n_clusters=5)
         self.dimension_reduction_technique = 'PCA'
-        self.df_with_category_embeddings = None
-        self.category_embedding_array = None
         self.color_map = None
         self.number_mistake_labels = 3
 
@@ -159,23 +159,20 @@ class TaskSelector:
                 else:
                     print(f"Skipping row with out category hint or embedding: {row['category_hints']}")
 
-        expanded_df = pd.concat(new_df_rows, ignore_index=True)  # Concatenate all the frames
-        self.expanded_df = expanded_df
+        self.expanded_df = pd.concat(new_df_rows, ignore_index=True)  # Concatenate all the frames
 
     def on_clustering_request(self):
         if not self.expanded_df.empty and self.cluster_algorithm:
-            self.expanded_df = self.cluster_algorithm.cluster(self.expanded_df)
-            self.expanded_df = self.cluster_algorithm.choose_labels(self.expanded_df)
+            # Only use the specified amount of mistake labels per student
+            self.clustered_df = self.expanded_df[self.expanded_df['category_hint_idx'] <= self.number_mistake_labels]
+            self.clustered_df = self.cluster_algorithm.cluster(self.clustered_df)
+            self.clustered_df = self.cluster_algorithm.choose_labels(self.clustered_df)
 
     def on_dim_reduction_request(self):
-        if not self.expanded_df.empty:
-            filtered_df_with_category_embedding, self.category_embedding_array = get_processed_embeddings(self.expanded_df, 'category_hint_embedding')
-            self.df_with_category_embeddings = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, self.category_embedding_array, 'category_hint', self.dimension_reduction_technique)
+        if not self.clustered_df.empty:
+            filtered_df_with_category_embedding, category_embedding_array = get_processed_embeddings(self.clustered_df, 'category_hint_embedding')
+            self.df_with_category_embeddings = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, category_embedding_array, 'category_hint', self.dimension_reduction_technique)
             self.df_with_category_embeddings.sort_values(by='mistake_category_label', inplace=True)
-
-
-
-
 
 
 # ts = TaskSelector()
