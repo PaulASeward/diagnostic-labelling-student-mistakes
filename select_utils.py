@@ -23,6 +23,7 @@ class TaskSelector:
         self.dimension_reduction_technique = 'PCA'
         self.df_with_category_embeddings = None
         self.category_embedding_array = None
+        self.color_map = None
         self.number_mistake_labels = 3
 
         columns_to_add = ['category_hints', 'category_hint_idx', 'category_hint_1', 'category_hint_1_embedding', 'category_hint_2', 'category_hint_2_embedding', 'category_hint_3', 'category_hint_3_embedding']
@@ -170,6 +171,8 @@ class TaskSelector:
         if not self.expanded_df.empty:
             filtered_df_with_category_embedding, self.category_embedding_array = get_processed_embeddings(self.expanded_df, 'category_hint_embedding')
             self.df_with_category_embeddings = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, self.category_embedding_array, 'category_hint', self.dimension_reduction_technique)
+            self.df_with_category_embeddings.sort_values(by='mistake_category_label', inplace=True)
+
 
 
 

@@ -1,6 +1,6 @@
 import numpy as np
 import plotly.graph_objects as go
-from scipy.spatial.distance import pdist, squareform
+import pandas as pd
 from scipy.cluster.hierarchy import dendrogram, linkage
 import plotly.figure_factory as ff
 import plotly.express as px
@@ -11,24 +11,39 @@ CATEGORY_IDX_COL = 'mistake_category_label'
 TEXT_COL = "category_hint"
 
 
+# dendro = ff.create_dendrogram(embeddings, orientation='left', labels=label_names, colorscale=list(color_map.values()), linkagefun=lambda x: linkage(x, 'ward', optimal_ordering=True))
+
+
 def create_color_map(task_embeddings_df, mistake_categories_dict, color_palette=COLOR_PALETTE):
     sorted_indices = sorted(task_embeddings_df[CATEGORY_IDX_COL].unique())
-    color_map = {idx: color_palette[idx % len(color_palette)] for idx in sorted_indices}
+    color_map = {}
+    for idx in sorted_indices:     # Map both index and category name to the same color
+        color = color_palette[idx % len(color_palette)]
+        category_name = task_embeddings_df[task_embeddings_df[CATEGORY_IDX_COL] == idx][CATEGORY_NAME_COL].iloc[0]
+        # category_name = mistake_categories_dict.get(idx, "Unknown")
+        color_map[idx] = color
+        color_map[category_name] = color
+
+    print("Color Map", color_map)
     return color_map
 
 
-# def create_color_map(task_embeddings_df, mistake_categories_dict, color_palette=COLOR_PALETTE):
-#     name_to_idx = {row[CATEGORY_NAME_COL]: row[CATEGORY_IDX_COL] for index, row in task_embeddings_df.iterrows()}
-#     sorted_names = sorted(mistake_categories_dict.keys())
-#     return {name_to_idx[name]: color_palette[i % len(color_palette)] for i, name in enumerate(sorted_names)}
+def build_scatter_plot_with_mistake_category_trace(task_embeddings_df, mistake_categories_dict, color_map, jitter=0.02):
+    """
+    Creates a scatter plot showing the groupings of student mistakes by their reduced embeddings.
 
-
-def build_scatter_plot_with_mistake_category_trace(task_embeddings_df, mistake_categories_dict, jitter=0.02):
+    Parameters:
+        df (pd.DataFrame): DataFrame containing the mistake categories and their counts.
+        mistake_categories_dict (Dictionary): name: embedding
+        color_map (Dictionary): Access colour through name or index of mistake category
+        jitter (float): Randomizes the X & Y coordinates to prevent overlap.
+    Returns:
+        figure: The scatter plot figure.
+    """
     title = f'Visualizing Clusters of Mistake Labels from Reduced Embeddings'
-    color_map = create_color_map(task_embeddings_df, mistake_categories_dict)
 
     fig = go.Figure()
-    for _, mistake_category_idx in enumerate(task_embeddings_df[CATEGORY_IDX_COL].unique()):
+    for mistake_category_idx in sorted(task_embeddings_df[CATEGORY_IDX_COL].unique()):
         mistake_category_df = task_embeddings_df[task_embeddings_df[CATEGORY_IDX_COL] == mistake_category_idx]
 
         marker_color = color_map[mistake_category_idx]  # Get color for Mistake Category Type
@@ -50,61 +65,55 @@ def build_scatter_plot_with_mistake_category_trace(task_embeddings_df, mistake_c
     return fig
 
 
-def plot_mistake_statistics(df, mistake_categories_dict):
+def plot_mistake_statistics(task_embeddings_df, mistake_categories_dict, color_map):
     """
     Creates a pie chart and a bar chart figure showing the distribution of student mistakes by category.
 
     Parameters:
-        df (pd.DataFrame): DataFrame containing the mistake categories and their counts.
+        task_embeddings_df (pd.DataFrame): DataFrame containing the mistake categories and their counts.
         mistake_categories_dict (Dictionary): name: embedding
-
+        color_map (Dictionary): Access colour through name or index of mistake category
     Returns:
         figure: The pie chart figure.
     """
-    if CATEGORY_NAME_COL not in df.columns or CATEGORY_IDX_COL not in df.columns:
-        raise ValueError(f"The DataFrame must contain the columns '{CATEGORY_NAME_COL}' and '{CATEGORY_IDX_COL}'.")
+    # Convert the CATEGORY_NAME_COL to a categorical type with the defined order
+    category_order = task_embeddings_df.sort_values(by=CATEGORY_IDX_COL).drop_duplicates(subset=[CATEGORY_IDX_COL])[CATEGORY_NAME_COL].tolist()
+    task_embeddings_df[CATEGORY_NAME_COL] = pd.Categorical(task_embeddings_df[CATEGORY_NAME_COL], categories=category_order, ordered=True)
 
-        # Count the occurrences of each category
-    df_count = df.groupby([CATEGORY_NAME_COL, CATEGORY_IDX_COL]).size().reset_index(name='count')
-
-    color_map = create_color_map(df, mistake_categories_dict)
-    df_count['color'] = df_count[CATEGORY_IDX_COL].apply(lambda idx: color_map[idx])
-    color_discrete_map = {row[CATEGORY_NAME_COL]: row['color'] for index, row in df_count.iterrows()}
+    df_count = task_embeddings_df.groupby([CATEGORY_NAME_COL]).size().reset_index(name='count')
 
     # Generate Pie Chart
-    pie_fig = px.pie(df_count, names=CATEGORY_NAME_COL, values='count', title='Distribution of Student Mistakes (Pie Chart)', color_discrete_map=color_discrete_map)
+    pie_fig = px.pie(df_count, names=CATEGORY_NAME_COL, values='count', title='Distribution of Student Mistakes (Pie Chart)', color=CATEGORY_NAME_COL, color_discrete_map=color_map, hole=.3)
     pie_fig.update_traces(textposition='inside', textinfo='percent+label')
     pie_fig.update_layout(width=800, height=800)
 
     return pie_fig
 
 
-def plot_dendrogram(task_embeddings_df, mistake_categories_dict):
+def plot_dendrogram(task_embeddings_df, mistake_categories_dict, color_map):
     """
     Plots a dendrogram using Plotly to show hierarchical clustering of embeddings to visualize similarity between student mistakes.
 
     Parameters:
         task_embeddings_df (pd.DataFrame): DataFrame containing the embeddings and labels.
         mistake_categories_dict (Dictionary): name: embedding
+        color_map (Dictionary): Access colour through name or index of mistake category
     """
     embeddings_columns = ['reduced_category_hint_embedding_1', 'reduced_category_hint_embedding_2']
-    color_map = create_color_map(task_embeddings_df, mistake_categories_dict)
     embeddings = task_embeddings_df[embeddings_columns].values
 
     label_names = task_embeddings_df[CATEGORY_NAME_COL].values
-    labels = task_embeddings_df[CATEGORY_IDX_COL].values
-
-    # Compute the linkage matrix using Ward's method
-    linkage_matrix = linkage(embeddings, 'ward', optimal_ordering=True)
+    label_idx = task_embeddings_df[CATEGORY_IDX_COL].values
 
     # Create the dendrogram with colors
-    dendro = ff.create_dendrogram(linkage_matrix, orientation='left')
+    dendro = ff.create_dendrogram(embeddings, orientation='left', labels=label_names)
 
     fig = go.Figure(data=dendro['data'])
     fig.update_layout(title_text='Student Mistake Categories Dendrogram',
                       xaxis=dict(title='Distance'),
-                      yaxis=dict(title='Student Mistake Label'),
-                      width=1200, height=1200)
+                      # yaxis=dict(title='Student Mistake Label'),
+                      yaxis=dict(title='Student Mistake Label', ticktext=label_names),
+                      width=1200, height=1200, margin=dict(l=200))
 
     return fig
 
