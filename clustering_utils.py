@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.cluster import DBSCAN
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
 from kneed import KneeLocator
 import ast
 from sklearn.preprocessing import StandardScaler
@@ -18,6 +17,7 @@ def available_clustering_techniques():
     techniques = {
         'KMeans': 'KMeans (Default) - K-Means Clustering using Euclidean distance',
         'DBSCAN': 'DBSCAN - Density-Based Spatial Clustering of Applications with Noise',
+        'Hierarchical': 'Hierarchical - Agglomerative Clustering'
     }
     return [{'label': value, 'value': key} for key, value in techniques.items()]
 
@@ -154,8 +154,13 @@ class ClusterAlgorithm:
         elif self.clustering_technique == 'DBSCAN':
             min_samples = max(2, int(len(X) * 0.05))
             self.cluster_algorithm = DBSCAN(eps=0.5, min_samples=min_samples, **self.kwargs)
-            db_labels = self.cluster_algorithm.fit_predict(input_data_scaled)
-            X.loc[valid_indices, self.label_column] = np.where(db_labels == -1, X.loc[valid_indices, self.label_column], db_labels)
+            predicted_categories = self.cluster_algorithm.fit_predict(input_data_scaled)
+            X.loc[valid_indices, self.label_column] = predicted_categories
+            return X
+        elif self.clustering_technique == 'Hierarchical':
+            self.cluster_algorithm = AgglomerativeClustering(n_clusters=self.n_clusters if self.n_clusters > 0 else None, **self.kwargs)
+            predicted_categories = self.cluster_algorithm.fit_predict(input_data_scaled)
+            X.loc[valid_indices, self.label_column] = predicted_categories
             return X
         else:
             raise ValueError("Unsupported dimensionality reduction method.")
@@ -177,22 +182,30 @@ class ClusterAlgorithm:
 
         if self.use_manual_mistake_categories == 2 and self.mistake_categories_dict:
             category_names = list(self.mistake_categories_dict.keys())
-            # Assuming X[self.label_column] contains indices corresponding to category_names
             X[self.cluster_name_column] = X[self.label_column].apply(lambda idx: category_names[idx])
             return X
 
         self.mistake_categories_dict = {}
-        for i, mistake_category_idx in enumerate(X[self.label_column].unique()):
+        mistake_category_indices = X[self.label_column].unique()
+        for mistake_category_idx in sorted(mistake_category_indices):
             mistake_category_df = X[X[self.label_column] == mistake_category_idx]
 
-            if not mistake_category_df['category_hint'].mode().empty:  # Find most common mistake category name
-
-                mistake_category_name = mistake_category_df['category_hint'].mode()[0]
-                mistake_category_embedding = mistake_category_df[mistake_category_df['category_hint'] == mistake_category_name]['category_hint_embedding'].iloc[0]
-            else:
+            if mistake_category_idx == -1:  # Unclustered data
                 mistake_category_name, mistake_category_embedding = calculate_centroid(mistake_category_df)
+                mistake_category_name = 'Other'
 
-            self.mistake_categories_dict[mistake_category_name] = mistake_category_embedding
-            X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = mistake_category_name
+                self.mistake_categories_dict[mistake_category_name] = mistake_category_embedding
+                X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = mistake_category_name
+                X.loc[X[self.label_column] == -1, self.label_column] = max(mistake_category_indices) + 1
+            else:
+                if not mistake_category_df['category_hint'].mode().empty:  # Find most common mistake category name
+
+                    mistake_category_name = mistake_category_df['category_hint'].mode()[0]
+                    mistake_category_embedding = mistake_category_df[mistake_category_df['category_hint'] == mistake_category_name]['category_hint_embedding'].iloc[0]
+                else:
+                    mistake_category_name, mistake_category_embedding = calculate_centroid(mistake_category_df)
+
+                self.mistake_categories_dict[mistake_category_name] = mistake_category_embedding
+                X.loc[X[self.label_column] == mistake_category_idx, self.cluster_name_column] = mistake_category_name
 
         return X
