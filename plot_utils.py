@@ -8,7 +8,7 @@ import plotly.express as px
 COLOR_PALETTE = px.colors.qualitative.Plotly
 CATEGORY_NAME_COL = 'mistake_category_name'
 CATEGORY_IDX_COL = 'mistake_category_label'
-TEXT_COL = "category_hint"
+CATEGORY_HINT_COL = "category_hint"
 
 
 def create_color_map(task_embeddings_df, mistake_categories_dict, color_palette=COLOR_PALETTE):
@@ -21,7 +21,6 @@ def create_color_map(task_embeddings_df, mistake_categories_dict, color_palette=
         color_map[idx] = color
         color_map[category_name] = color
 
-    print("Color Map", color_map)
     return color_map
 
 
@@ -53,7 +52,7 @@ def build_scatter_plot_with_mistake_category_trace(task_embeddings_df, mistake_c
             x=x_values,
             y=y_values,
             mode='markers', marker=dict(color=marker_color, line=dict(width=1, color='DarkSlateGrey')),
-            name=mistake_category_df[CATEGORY_NAME_COL].iloc[0], text=mistake_category_df[TEXT_COL], customdata=custom_data, hoverinfo='text+name'
+            name=mistake_category_df[CATEGORY_NAME_COL].iloc[0], text=mistake_category_df[CATEGORY_HINT_COL], customdata=custom_data, hoverinfo='text+name'
         ))
 
     fig.update_layout(xaxis_title='Principal Component 1', yaxis_title='Principal Component 2', clickmode='event+select', width=1200, height=750,
@@ -83,7 +82,7 @@ def plot_mistake_statistics(task_embeddings_df, mistake_categories_dict, color_m
     return pie_fig
 
 
-def plot_dendrogram(task_embeddings_df, mistake_categories_dict, color_map):
+def plot_dendrogram(task_embeddings_df, mistake_categories_dict, color_map, label_col=CATEGORY_NAME_COL):
     """
     Plots a dendrogram using Plotly to show hierarchical clustering of embeddings to visualize similarity between student mistakes.
 
@@ -94,9 +93,20 @@ def plot_dendrogram(task_embeddings_df, mistake_categories_dict, color_map):
     """
     embeddings_columns = ['reduced_category_hint_embedding_1', 'reduced_category_hint_embedding_2']
     embeddings = task_embeddings_df[embeddings_columns].values
-    label_names = task_embeddings_df[TEXT_COL].values
+    label_names = task_embeddings_df[label_col].values
+    # category_names = task_embeddings_df[CATEGORY_NAME_COL].values
     dendro = ff.create_dendrogram(embeddings, labels=label_names.tolist(), orientation='left', linkagefun=lambda x: linkage(embeddings, 'ward', optimal_ordering=True))
     fig = go.Figure(data=dendro['data'])
+
+    # # Map labels to mistake categories
+    # label_to_category = {row[TEXT_COL]: mistake_categories_dict[row[TEXT_COL]] for index, row in task_embeddings_df.iterrows()}
+    #
+    # # Create a list of colors for each category
+    # colors = [color_map[label_to_category[label]] for label in label_names]
+    #
+    # # Update the traces in the figure to reflect the colors of the categories
+    # for i, trace in enumerate(fig.data):
+    #     trace['line']['color'] = colors[i]
 
     fig.update_layout(
         yaxis=dict(

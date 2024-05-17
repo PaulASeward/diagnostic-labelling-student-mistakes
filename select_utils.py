@@ -25,6 +25,7 @@ class TaskSelector:
         self.dimension_reduction_technique = 'PCA'
         self.color_map = None
         self.number_mistake_labels = 3
+        self.dendrogram_label = 'mistake_category_name'
 
         columns_to_add = ['category_hints', 'category_hint_idx', 'category_hint_1', 'category_hint_1_embedding', 'category_hint_2', 'category_hint_2_embedding', 'category_hint_3', 'category_hint_3_embedding']
         changes_made = False
