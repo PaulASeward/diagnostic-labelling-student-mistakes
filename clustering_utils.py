@@ -153,12 +153,14 @@ class ClusterAlgorithm:
 
         elif self.clustering_technique == 'DBSCAN':
             min_samples = max(2, int(len(X) * 0.05))
-            self.cluster_algorithm = DBSCAN(eps=0.5, min_samples=min_samples, **self.kwargs)
+            self.cluster_algorithm = DBSCAN(eps=1.5, min_samples=min_samples, **self.kwargs)
             predicted_categories = self.cluster_algorithm.fit_predict(input_data_scaled)
             X.loc[valid_indices, self.label_column] = predicted_categories
             return X
         elif self.clustering_technique == 'Hierarchical':
-            self.cluster_algorithm = AgglomerativeClustering(n_clusters=self.n_clusters if self.n_clusters > 0 else None, **self.kwargs)
+            n_clusters = self.n_clusters if self.n_clusters > 0 else None
+            dist_threshold = None if n_clusters else 1.5
+            self.cluster_algorithm = AgglomerativeClustering(n_clusters=n_clusters, distance_threshold=dist_threshold, **self.kwargs)
             predicted_categories = self.cluster_algorithm.fit_predict(input_data_scaled)
             X.loc[valid_indices, self.label_column] = predicted_categories
             return X

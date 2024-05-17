@@ -98,18 +98,17 @@ app.layout = html.Div([
                 id='cluster-groups-dropdown',
                 placeholder="Select number of clusters",
                 options=[
-                    {'label': 'Auto', 'value': -1},
+                    {'label': 'Auto (Default)', 'value': -1},
                      {'label': '1', 'value': 1},
                      {'label': '2', 'value': 2},
                      {'label': '3', 'value': 3},
                      {'label': '4', 'value': 4},
-                     {'label': '5 (Default)', 'value': 5},
+                     {'label': '5', 'value': 5},
                      {'label': '6', 'value': 6},
                      {'label': '7', 'value': 7},
                      {'label': '8', 'value': 8},
                     {'label': '9', 'value': 9},
                     {'label': '10', 'value': 10},
-
                 ],
             ),
         ], style={'width': '25%', 'padding-right': '8px'}),
@@ -250,12 +249,10 @@ def set_task_options(selected_assignment_id):
     [State('course-dropdown', 'value'),
      State('assignment-dropdown', 'value'),
      State('task-checklist', 'value'),
-     State('cluster-groups-dropdown', 'value'),
-     State('clustering-technique', 'value'),
      State('manual-mistake-label-table', 'data'),
      State('manual-mistake-label-table', 'columns')]
 )
-def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, manual_override, mistake_selection, dendrogram_label, dendrogram_color, selected_course, selected_assignment, selected_tasks, selected_n_clusters, selected_clustering_technique, mistake_table_current_data, mistake_table_columns):
+def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, manual_override, mistake_selection, dendrogram_label, dendrogram_color, selected_course, selected_assignment, selected_tasks, mistake_table_current_data, mistake_table_columns):
     triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
 
     if triggered_id == 'generate-button':
@@ -303,10 +300,10 @@ def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_da
         task_selector.dimension_reduction_technique = dimension_reduction_technique
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'clustering-technique':
-        task_selector.on_cluster_config_selection(clustering_technique, selected_n_clusters)
+        task_selector.cluster_algorithm.clustering_technique = clustering_technique
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update if clustering_technique != 'DBSCAN' else 0
     elif triggered_id == 'cluster-groups-dropdown':
-        task_selector.on_cluster_config_selection(selected_clustering_technique, n_clusters)
+        task_selector.cluster_algorithm.n_clusters = n_clusters
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     elif triggered_id == 'manual-selection_override-dropdown':
         task_selector.cluster_algorithm.use_manual_mistake_categories = manual_override

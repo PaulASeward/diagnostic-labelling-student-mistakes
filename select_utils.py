@@ -21,7 +21,7 @@ class TaskSelector:
         self.clustered_df = None
         self.df_with_category_embeddings = None
 
-        self.cluster_algorithm = ClusterAlgorithm('KMeans', n_clusters=5)
+        self.cluster_algorithm = ClusterAlgorithm('KMeans', n_clusters=-1)
         self.dimension_reduction_technique = 'PCA'
         self.color_map = None
         self.number_mistake_labels = 3
@@ -41,10 +41,6 @@ class TaskSelector:
     def _create_mapping(self, id_column, title_column):
         """Create a mapping from id to title for dropdown options."""
         return self.df_feedback[[id_column, title_column]].drop_duplicates().set_index(id_column)[title_column].to_dict()
-
-    def on_cluster_config_selection(self, clustering_technique='KMeans', n_clusters=5):
-        self.cluster_algorithm.clustering_technique = clustering_technique if clustering_technique else 'KMeans'
-        self.cluster_algorithm.n_clusters = n_clusters if n_clusters else 5
 
     def on_manual_categories_selection(self, mistake_table_current_data):
         manual_categories = [row['option'] for row in mistake_table_current_data]
@@ -165,7 +161,6 @@ class TaskSelector:
 
     def on_clustering_request(self):
         if not self.expanded_df.empty and self.cluster_algorithm:
-            # Only use the specified amount of mistake labels per student
             self.clustered_df = self.expanded_df[self.expanded_df['category_hint_idx'] <= self.number_mistake_labels]
             self.clustered_df = self.cluster_algorithm.cluster(self.clustered_df)
             self.clustered_df = self.cluster_algorithm.choose_labels(self.clustered_df)

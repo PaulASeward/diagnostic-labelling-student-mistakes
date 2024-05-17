@@ -98,12 +98,10 @@ def plot_dendrogram(task_embeddings_df, mistake_categories_dict, color_map, labe
     fig = go.Figure(data=dendro['data'])
 
     if use_existing_cluster_colors:
-        # Add custom data to each trace
         for i, trace in enumerate(fig.data):
             custom_data = [task_embeddings_df.iloc[i][CATEGORY_NAME_COL], color_map[task_embeddings_df.iloc[i][CATEGORY_NAME_COL]]]
             trace['customdata'] = custom_data
 
-        # Update the traces in the figure to reflect the colors of the categories
         for trace in fig.data:
             custom_data = trace['customdata']
             category_name, color = custom_data[0], custom_data[1]
