@@ -126,25 +126,29 @@ app.layout = html.Div([
         ], style={'width': '25%', 'padding-right': '0px'})
     ], style={'display': 'flex', 'flexGrow': '1', 'gap': '8px'}),
     html.Div([
-        html.Button('Add Category', id='adding-rows-button', n_clicks=0),
-        dash_table.DataTable(
-            id='manual-mistake-label-table',
-            columns=[
-                {'name': 'Mistake Category', 'id': 'option', 'editable': True}
-            ],
-            data=[],
-            editable=True,
-            row_deletable=True,
-            style_table={'width': '33%', 'minWidth': '33%'},
-            style_header={'fontWeight': 'bold', 'backgroundColor': '#f3f3f3'},
-            style_cell={
-                'fontFamily': 'Arial, sans-serif',
-                'fontSize': '14px',
-                'textAlign': 'left',
-                'padding': '10px',
-            },
-        ),
-    ], style={'margin-bottom': '20px'}),
+        html.Div([
+            dash_table.DataTable(
+                id='manual-mistake-label-table',
+                columns=[
+                    {'name': 'Mistake Category', 'id': 'option', 'editable': True}
+                ],
+                data=[],
+                editable=True,
+                row_deletable=True,
+                style_table={'width': '33%', 'minWidth': '33%'},
+                style_header={'fontWeight': 'bold', 'backgroundColor': '#f3f3f3'},
+                style_cell={
+                    'fontFamily': 'Arial, sans-serif',
+                    'fontSize': '14px',
+                    'textAlign': 'left',
+                    'padding': '10px',
+                }
+            ),
+        ], style={'padding-right': '2px'}),
+        html.Div([
+            html.Button('Add Category', id='adding-rows-button', n_clicks=0),
+        ], style={'padding-top': '10px', 'padding-bottom': '10px'}),
+    ], style={'margin-bottom': '0px', 'display': 'flex', 'flexGrow': '1', 'gap': '25px'}),
     html.Div([
         html.Div([
             dcc.Graph(id='scatter-plot', hoverData=None),
@@ -174,6 +178,8 @@ app.layout = html.Div([
                                 {'if': {'column_id': 'ta_feedback_text'}, 'textAlign': 'left', 'padding': '15px', 'fontSize': '16px', 'minWidth': '300px', 'width': '40%', 'maxWidth': '600px'}]
     ),
     html.Div([
+        html.Div([
+        html.P("Labels Displayed:", style={'textAlign': 'left', 'fontWeight': 'bold',}),
         dcc.RadioItems(
             id='dendrogram_label',
             options=[
@@ -182,8 +188,19 @@ app.layout = html.Div([
             ],
             value=CATEGORY_NAME_COL,
             labelStyle={'display': 'inline-block'}
-        )
-    ], style={'flexShrink': '1', 'minWidth': '0', 'width': '100%', 'padding-top': '10px'}),
+        )]),
+        html.Div([
+            html.P("Colours Displayed:", style={'textAlign': 'left', 'fontWeight': 'bold',}),
+            dcc.RadioItems(
+                id='dendrogram_color',
+                options=[
+                    {'label': 'Above Algorithm Clusters', 'value': True},
+                    {'label': 'Dendrogram Clusters', 'value': False},
+                ],
+                value=False,
+                labelStyle={'display': 'inline-block'}
+            )])
+    ], style={'display': 'flex', 'flexGrow': '1', 'gap': '25px'}),
     html.Div([
         dcc.Graph(id='dendro_fig'),
     ], style={'margin-bottom': '20px'}),
@@ -228,7 +245,8 @@ def set_task_options(selected_assignment_id):
      Input('cluster-groups-dropdown', 'value'),
      Input('manual-selection_override-dropdown', 'value'),
      Input('mistake-selection-mode', 'value'),
-     Input('dendrogram_label', 'value')],
+    Input('dendrogram_label', 'value'),
+     Input('dendrogram_color', 'value')],
     [State('course-dropdown', 'value'),
      State('assignment-dropdown', 'value'),
      State('task-checklist', 'value'),
@@ -237,7 +255,7 @@ def set_task_options(selected_assignment_id):
      State('manual-mistake-label-table', 'data'),
      State('manual-mistake-label-table', 'columns')]
 )
-def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, manual_override, mistake_selection, dendrogram_label, selected_course, selected_assignment, selected_tasks, selected_n_clusters, selected_clustering_technique, mistake_table_current_data, mistake_table_columns):
+def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_data, dimension_reduction_technique, clustering_technique, n_clusters, manual_override, mistake_selection, dendrogram_label, dendrogram_color, selected_course, selected_assignment, selected_tasks, selected_n_clusters, selected_clustering_technique, mistake_table_current_data, mistake_table_columns):
     triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
 
     if triggered_id == 'generate-button':
@@ -297,7 +315,11 @@ def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_da
         task_selector.number_mistake_labels = 3 if mistake_selection == 'multiple' else 1
     elif triggered_id == 'dendrogram_label':
         task_selector.dendrogram_label = dendrogram_label
-        dendro_fig = plot_dendrogram(task_selector.df_with_category_embeddings, task_selector.cluster_algorithm.mistake_categories_dict, task_selector.color_map, task_selector.dendrogram_label)
+        dendro_fig = plot_dendrogram(task_selector.df_with_category_embeddings, task_selector.cluster_algorithm.mistake_categories_dict, task_selector.color_map, task_selector.dendrogram_label, task_selector.dendrogram_color)
+        return dash.no_update, dash.no_update, dash.no_update, dendro_fig, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    elif triggered_id == 'dendrogram_color':
+        task_selector.dendrogram_color = dendrogram_color
+        dendro_fig = plot_dendrogram(task_selector.df_with_category_embeddings, task_selector.cluster_algorithm.mistake_categories_dict, task_selector.color_map, task_selector.dendrogram_label, task_selector.dendrogram_color)
         return dash.no_update, dash.no_update, dash.no_update, dendro_fig, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update

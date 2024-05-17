@@ -82,7 +82,7 @@ def plot_mistake_statistics(task_embeddings_df, mistake_categories_dict, color_m
     return pie_fig
 
 
-def plot_dendrogram(task_embeddings_df, mistake_categories_dict, color_map, label_col=CATEGORY_NAME_COL):
+def plot_dendrogram(task_embeddings_df, mistake_categories_dict, color_map, label_col=CATEGORY_NAME_COL, use_existing_cluster_colors=False):
     """
     Plots a dendrogram using Plotly to show hierarchical clustering of embeddings to visualize similarity between student mistakes.
 
@@ -94,19 +94,21 @@ def plot_dendrogram(task_embeddings_df, mistake_categories_dict, color_map, labe
     embeddings_columns = ['reduced_category_hint_embedding_1', 'reduced_category_hint_embedding_2']
     embeddings = task_embeddings_df[embeddings_columns].values
     label_names = task_embeddings_df[label_col].values
-    # category_names = task_embeddings_df[CATEGORY_NAME_COL].values
     dendro = ff.create_dendrogram(embeddings, labels=label_names.tolist(), orientation='left', linkagefun=lambda x: linkage(embeddings, 'ward', optimal_ordering=True))
     fig = go.Figure(data=dendro['data'])
 
-    # # Map labels to mistake categories
-    # label_to_category = {row[TEXT_COL]: mistake_categories_dict[row[TEXT_COL]] for index, row in task_embeddings_df.iterrows()}
-    #
-    # # Create a list of colors for each category
-    # colors = [color_map[label_to_category[label]] for label in label_names]
-    #
-    # # Update the traces in the figure to reflect the colors of the categories
-    # for i, trace in enumerate(fig.data):
-    #     trace['line']['color'] = colors[i]
+    if use_existing_cluster_colors:
+        # Add custom data to each trace
+        for i, trace in enumerate(fig.data):
+            custom_data = [task_embeddings_df.iloc[i][CATEGORY_NAME_COL], color_map[task_embeddings_df.iloc[i][CATEGORY_NAME_COL]]]
+            trace['customdata'] = custom_data
+
+        # Update the traces in the figure to reflect the colors of the categories
+        for trace in fig.data:
+            custom_data = trace['customdata']
+            category_name, color = custom_data[0], custom_data[1]
+            trace['line']['color'] = color
+            trace['name'] = category_name  # Update the trace name to the category name
 
     fig.update_layout(
         yaxis=dict(
