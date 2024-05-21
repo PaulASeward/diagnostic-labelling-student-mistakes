@@ -97,16 +97,35 @@ def plot_dendrogram(task_embeddings_df, mistake_categories_dict, color_map, labe
     dendro = ff.create_dendrogram(embeddings, labels=label_names.tolist(), orientation='left', linkagefun=lambda x: linkage(embeddings, 'ward', optimal_ordering=True))
     fig = go.Figure(data=dendro['data'])
 
+    listed_categories = []
     if use_existing_cluster_colors:
         for i, trace in enumerate(fig.data):
-            custom_data = [task_embeddings_df.iloc[i][CATEGORY_NAME_COL], color_map[task_embeddings_df.iloc[i][CATEGORY_NAME_COL]]]
-            trace['customdata'] = custom_data
-
-        for trace in fig.data:
-            custom_data = trace['customdata']
-            category_name, color = custom_data[0], custom_data[1]
+            category_name = task_embeddings_df.iloc[i][CATEGORY_NAME_COL]
+            color = color_map[task_embeddings_df.iloc[i][CATEGORY_NAME_COL]]
             trace['line']['color'] = color
-            trace['name'] = category_name  # Update the trace name to the category name
+            trace['name'] = category_name
+            if category_name not in listed_categories:
+                listed_categories.append(category_name)
+            else:
+                trace['showlegend'] = False
+    else:
+        trace_names = []
+        for i, trace in enumerate(fig.data):
+            category_name = task_embeddings_df.iloc[i][CATEGORY_NAME_COL]
+            assigned_color = trace['marker']['color']
+            if assigned_color not in listed_categories: # New color and cluster
+                listed_categories.append(assigned_color)
+            trace_name = 'Cluster ' + str(len(listed_categories)) + ' - ' + category_name
+            trace['name'] = trace_name
+            if assigned_color not in listed_categories: # New color and cluster
+                trace_names.append(trace_name)
+            else:
+                if trace_name in trace_names:
+                    trace['showlegend'] = False
+                else: # Same color cluster but different label
+                    trace_names.append(trace_name)
+
+
 
     fig.update_layout(
         yaxis=dict(
