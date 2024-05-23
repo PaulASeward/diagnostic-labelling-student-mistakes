@@ -1,4 +1,3 @@
-import openai
 from openai import OpenAI
 from openai_utils.openai_config import OpenAiConfig, OpenAiOptions
 from openai_utils.prompt_building import build_category_hint_prompt
@@ -85,7 +84,7 @@ def generate_embeddings(text, options: OpenAiOptions, dimensions=None):
 
 def generate_category_hint(feedback):
     prompt = build_category_hint_prompt(feedback)
-    options = OpenAiOptions(model='gpt-4', max_tokens=1000)
+    options = OpenAiOptions(model='gpt-3.5-turbo', max_tokens=500)
     response = call_openai(prompt=prompt, options=options)
 
     return response.choices[0].message.content

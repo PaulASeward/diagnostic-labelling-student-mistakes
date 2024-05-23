@@ -133,6 +133,7 @@ class ClusterAlgorithm:
             return X
 
         elif self.clustering_technique == 'KMeans':
+            n_clusters = self.n_clusters
             if self.n_clusters == -1:
                 sse = []
                 for k in range(1, 11):
@@ -142,8 +143,7 @@ class ClusterAlgorithm:
 
                 knee_locator = KneeLocator(range(1, 11), sse, curve='convex', direction='decreasing')
                 self.optimal_n_clusters = knee_locator.knee if knee_locator.knee else 4
-
-            n_clusters = self.optimal_n_clusters if self.optimal_n_clusters else self.n_clusters
+                n_clusters = self.optimal_n_clusters
 
             self.cluster_algorithm = KMeans(n_clusters=n_clusters, n_init=10, **self.kwargs)
 

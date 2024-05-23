@@ -1,7 +1,6 @@
-import numpy as np
-import pandas as pd
 from clustering_utils import *
 from embeddings import *
+from category_hint import *
 from tqdm import tqdm
 from dimension_reduction import project_embeddings_to_reduced_dimension
 
@@ -70,7 +69,6 @@ class TaskSelector:
             self.load_task()
             self.on_category_hint_generation()
             self.on_embedding_request()
-            self.load_task()
             self.expand_df()
         return None
 
@@ -110,15 +108,21 @@ class TaskSelector:
                     print(f"An error occurred while generating category hints: {e}")
                     return None
 
+            self.load_task()
             return self.selected_df
 
     def on_embedding_request(self, text_to_process='category_hint'):
         if not self.selected_df.empty:
-
             for category_hint_idx in range(1, 4):  # Iterate over 3 different category hints
                 text_column = text_to_process + f'_{category_hint_idx}'
                 embedding_column = text_to_process + f'_{category_hint_idx}_embedding'
-                missing_embeddings = self.selected_df[embedding_column].isna()
+
+                # Define the conditions
+                condition_text_not_na = ~self.selected_df[text_column].isna()
+                condition_text_valid = ~self.selected_df[text_column].isin(["No Mistake", "No Mistakes", "No mistakes", "No mistake", "N/A", "None"])
+                condition_embedding_na = self.selected_df[embedding_column].isna()
+                missing_embeddings = condition_text_not_na & condition_text_valid & condition_embedding_na
+
                 if missing_embeddings.any():
                     try:
                         load_openai_env()
@@ -138,6 +142,7 @@ class TaskSelector:
                         print(f"An error occurred while updating embeddings: {e}")
                         return None
 
+            self.load_task()
             return self.selected_df
 
     def expand_df(self):
@@ -147,16 +152,18 @@ class TaskSelector:
         for _, row in self.selected_df.iterrows():
             for i in range(1, self.number_mistake_labels + 1):  # Generate up to three new rows for each category hint depending on the number of mistakes allowed
                 # Only create new row if there is a category hint and embedding
-                if not pd.isna(row[f'category_hint_{i}']) and not pd.isna(row[f'category_hint_{i}_embedding']):
-                    new_row = row.copy()
-                    new_row['category_hint'] = row[f'category_hint_{i}']
-                    new_row['category_hint_embedding'] = row[f'category_hint_{i}_embedding']
-                    new_row['category_hint_idx'] = i
-                    new_row['mistake_category_name'] = pd.NA
-                    new_df_rows.append(pd.DataFrame([new_row]))
-                else:
-                    print(f"Skipping row with out category hint or embedding: {row['category_hints']}")
-
+                try:
+                    if not pd.isna(row[f'category_hint_{i}']) and row[f'category_hint_{i}_embedding'] is not pd.NA and row[f'category_hint_{i}_embedding'] is not np.nan:
+                        new_row = row.copy()
+                        new_row['category_hint'] = row[f'category_hint_{i}']
+                        new_row['category_hint_embedding'] = row[f'category_hint_{i}_embedding']
+                        new_row['category_hint_idx'] = i
+                        new_row['mistake_category_name'] = pd.NA
+                        new_df_rows.append(pd.DataFrame([new_row]))
+                    else:
+                        print(f"Skipping row with out category hint or embedding: {row['category_hints']}")
+                except Exception as e:
+                    print(f"An error occurred while expanding DataFrame: {e} for row: {row} for category hint index: {i}")
         self.expanded_df = pd.concat(new_df_rows, ignore_index=True)  # Concatenate all the frames
 
     def on_clustering_request(self):
@@ -166,6 +173,7 @@ class TaskSelector:
             self.clustered_df = self.cluster_algorithm.choose_labels(self.clustered_df)
 
     def on_dim_reduction_request(self):
+        x=1
         if not self.clustered_df.empty:
             filtered_df_with_category_embedding, category_embedding_array = get_processed_embeddings(self.clustered_df, 'category_hint_embedding')
             self.df_with_category_embeddings = project_embeddings_to_reduced_dimension(filtered_df_with_category_embedding, category_embedding_array, 'category_hint', self.dimension_reduction_technique)

@@ -1,5 +1,5 @@
 CATEGORY_HINT_PROMPT = (
-    "Given this feedback given to a student, return a comma separated list of diagnostic labels (1-6 word max) to categorize the student's mistakes for future analytical purposes, with the most important mistakes first. List MUST BE OF MAX 3 items but may be less. Be as specific as possible with what the student got wrong. Return the string, 'N/A' if student made no significant mistakes."
+    "Given this feedback given to a student, return a comma separated list of diagnostic labels (1-6 word max) to categorize the student's mistakes for future analytical purposes, with the most important mistakes first. List MUST BE OF MAX 3 items but may be less. Be as specific as possible with what the student got wrong. Return the string, 'No mistakes' if student made no significant mistakes."
 )
 
 
