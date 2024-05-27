@@ -12,7 +12,6 @@ def load_openai_env():
     openai.api_key = os.environ["OPENAI_API_KEY"]
 
 
-
 def call_openai(prompt, options: OpenAiOptions):
     """
     Call OpenAI API with the given prompt and options.
@@ -87,7 +86,8 @@ def generate_category_hint(feedback):
     options = OpenAiOptions(model='gpt-3.5-turbo', max_tokens=500)
     response = call_openai(prompt=prompt, options=options)
 
-    return response.choices[0].message.content
+    hints = response.choices[0].message.content
+    return hints
 
 
 

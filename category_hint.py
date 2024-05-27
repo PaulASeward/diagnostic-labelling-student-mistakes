@@ -20,23 +20,23 @@ def clean_category_hints(category_hints):
     if (isinstance(category_hints, str) and category_hints == '') or pd.isna(category_hints):
         print("No Category Hint provided", category_hints)
         return [pd.NA, pd.NA, pd.NA]
+
+    if ',' in category_hints:
+        items = category_hints.split(',')
+    elif '\n' in category_hints:
+        items = category_hints.split('\n')
+    elif '1' in category_hints:
+        # Try splitting by numbered items pattern (e.g., "1. Item1 2. Item2")
+        items = re.split(r'\d+\.\s*', category_hints)
+        # items = [item for item in items if item.strip()]
     else:
-        if ',' in category_hints:
-            items = category_hints.split(',')
-        elif '\n' in category_hints:
-            items = category_hints.split('\n')
-        elif '1' in category_hints:
-            # Try splitting by numbered items pattern (e.g., "1. Item1 2. Item2")
-            items = re.split(r'\d+\.\s*', category_hints)
-            # items = [item for item in items if item.strip()]
-        else:
-            print("No Splitting Separator found in: ", category_hints)
-            items = [category_hints]
+        print("No Splitting Separator found in: ", category_hints)
+        items = [category_hints]
 
-            # Strip whitespace and slice to get at most the first three items
-        selected_items = [item.strip() for item in items[:3]]
+        # Strip whitespace and slice to get at most the first three items
+    selected_items = [item.strip() for item in items[:3]]
 
-        # Ensure there are exactly three items, filling with pd.NA if fewer than three
-        while len(selected_items) < 3:
-            selected_items.append(pd.NA)
-        return selected_items
+    # Ensure there are exactly three items, filling with pd.NA if fewer than three
+    while len(selected_items) < 3:
+        selected_items.append(pd.NA)
+    return selected_items
