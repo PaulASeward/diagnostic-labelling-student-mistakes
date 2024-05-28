@@ -30,7 +30,6 @@ def clean_category_hints(category_hints):
         items = re.split(r'\d+\.\s*', category_hints)
         # items = [item for item in items if item.strip()]
     else:
-        print("No Splitting Separator found in: ", category_hints)
         items = [category_hints]
 
         # Strip whitespace and slice to get at most the first three items
