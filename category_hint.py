@@ -39,3 +39,12 @@ def clean_category_hints(category_hints):
     while len(selected_items) < 3:
         selected_items.append(pd.NA)
     return selected_items
+
+
+def generate_category_hint(feedback):
+    prompt = build_category_hint_prompt(feedback)
+    options = OpenAiOptions(model='gpt-3.5-turbo', max_tokens=500)
+    response = call_openai(prompt=prompt, options=options)
+
+    hints = response.choices[0].message.content
+    return hints
