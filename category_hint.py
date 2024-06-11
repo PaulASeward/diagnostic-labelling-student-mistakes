@@ -9,7 +9,6 @@ def add_category_hint(feedback):
     else:
         try:
             category_hint = generate_category_hint(feedback)
-            print(f"Category hint: {category_hint}")
         except Exception as e:
             print(f"An error occurred while generating category hint: {e}")
             category_hint = pd.NA

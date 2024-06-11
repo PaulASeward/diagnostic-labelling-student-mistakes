@@ -136,7 +136,7 @@ class ClusterAlgorithm:
             n_clusters = self.n_clusters
             if self.n_clusters == -1:
                 sse = []
-                for k in range(1, 11):
+                for k in range(2, 11):
                     kmeans = KMeans(n_clusters=k, n_init=10, random_state=42)
                     kmeans.fit(input_data_scaled)
                     sse.append(kmeans.inertia_)

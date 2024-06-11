@@ -160,8 +160,6 @@ class TaskSelector:
                         new_row['category_hint_idx'] = i
                         new_row['mistake_category_name'] = pd.NA
                         new_df_rows.append(pd.DataFrame([new_row]))
-                    else:
-                        print(f"Skipping row with out category hint or embedding: {row['category_hints']}")
                 except Exception as e:
                     print(f"An error occurred while expanding DataFrame: {e} for row: {row} for category hint index: {i}")
         self.expanded_df = pd.concat(new_df_rows, ignore_index=True)  # Concatenate all the frames
