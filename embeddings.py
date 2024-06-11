@@ -5,7 +5,7 @@ from openai_utils.openai_request import *
 from openai_utils.openai_config import OpenAiOptions
 
 
-def calculate_embedding(feedback, options=OpenAiOptions(model='text-embedding-ada-002', max_tokens=300)):
+def calculate_embedding(feedback, options=OpenAiOptions(model='text-embedding-3-small', max_tokens=300)):
     if (isinstance(feedback, str) and feedback == '') or pd.isna(feedback):
         embedding = pd.NA
     else:
@@ -41,7 +41,7 @@ def generate_embeddings(text, options: OpenAiOptions, dimensions=None):
 
     text = text.replace("\n", " ")
 
-    embedding = client.embeddings.create(input=[text], model=options.model).data[0].embedding
+    embedding = client.embeddings.create(input=[text], model=options.model, dimensions=256).data[0].embedding
 
     if dimensions is not None:
         return embedding[:dimensions]
