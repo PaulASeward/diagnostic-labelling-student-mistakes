@@ -1,4 +1,5 @@
 import dash
+import argparse
 from dash import dcc, html, Input, Output, callback, State
 from dash import callback_context, dash_table
 from dash.exceptions import PreventUpdate
@@ -10,8 +11,10 @@ from plot_utils import *
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
-
-task_selector = TaskSelector()
+data_path = None
+generate_hints = False
+generate_embeddings = False
+task_selector = TaskSelector(generate_category_hints=generate_hints, generate_embeddings=generate_embeddings, feedback_path=data_path)
 
 # App layout
 app.layout = html.Div([
@@ -292,7 +295,7 @@ def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_da
     elif triggered_id == 'scatter-plot':
         if not selected_data:
             raise PreventUpdate
-        selected_points_indices = [(point['customdata']['student_id'], point['customdata']['category_hint_idx']) for point in selected_data['points']]
+        selected_points_indices = [(point['customdata']['user_id'], point['customdata']['category_hint_idx']) for point in selected_data['points']]
         updated_table_data = task_selector.update_table(selected_points_indices, task_selector.df_with_category_embeddings)
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update, updated_table_data, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
@@ -323,4 +326,20 @@ def update_dashboard(n_clicks_add, n_clicks_generate, n_clicks_load, selected_da
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    # Check if the script is run with the tags, generate_embeddings or generate_hints
+    parser = argparse.ArgumentParser(description="Run the Dash app.")
+    # Add debug argument
+    parser.add_argument('--debug', type=bool, default=False, help='Run the app in debug mode')
+    parser.add_argument('--generate_hints', type=bool, default=False, help='Generate hints upon task selection if none are provided')
+    parser.add_argument('--generate_embeddings', type=bool, default=False, help='Generate embeddings upon task selection if none are provided')
+    parser.add_argument('--data_path', type=str, default=None, help='Path to the data file (CSV) to load')
+    args, remaining = parser.parse_known_args()
+
+    generate_hints = args.generate_hints
+    generate_embeddings = args.generate_embeddings
+    data_path = args.data_path
+
+    task_selector = TaskSelector(generate_category_hints=generate_hints, generate_embeddings=generate_embeddings,
+                                 feedback_path=data_path)
+
+    app.run(debug=args.debug)

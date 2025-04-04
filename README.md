@@ -30,12 +30,29 @@ If this virtual environment is already created and requirements installed into i
 source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 ```
 
+## Prepping the Data
+
+Before running the application clean the data by running the command:
+    
+```bash
+python3 clean_utils.py
+```
+
+
+
+
 ## Running the Application
 
 To start the Dash server and run the application, execute:
     
 ```bash
 python3 app.py
+```
+
+If the task did NOT already have pre-generated embeddings or categorical hints for the mistake labels, run the app with the following command(s) depending on what is missing:
+
+```bash
+python3 app.py --debug=True --generate_embeddings=True --generate_hints=True
 ```
 
 The application will be available at http://127.0.0.1:8050/

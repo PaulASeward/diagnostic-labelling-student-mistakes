@@ -43,7 +43,7 @@ def build_scatter_plot_with_mistake_category_trace(task_embeddings_df, mistake_c
         mistake_category_df = task_embeddings_df[task_embeddings_df[CATEGORY_IDX_COL] == mistake_category_idx]
 
         marker_color = color_map[mistake_category_idx]  # Get color for Mistake Category Type
-        custom_data = mistake_category_df.apply(lambda row: {'student_id': row['student_id'], 'category_hint_idx': row['category_hint_idx']}, axis=1).tolist()
+        custom_data = mistake_category_df.apply(lambda row: {'user_id': row['user_id'], 'category_hint_idx': row['category_hint_idx']}, axis=1).tolist()
 
         x_values = mistake_category_df[f'reduced_category_hint_embedding_1'] + (np.random.rand(len(mistake_category_df)) - 0.5) * jitter * (task_embeddings_df[f'reduced_category_hint_embedding_1'].max() - task_embeddings_df[f'reduced_category_hint_embedding_1'].min())
         y_values = mistake_category_df[f'reduced_category_hint_embedding_2'] + (np.random.rand(len(mistake_category_df)) - 0.5) * jitter * (task_embeddings_df[f'reduced_category_hint_embedding_2'].max() - task_embeddings_df[f'reduced_category_hint_embedding_2'].min())

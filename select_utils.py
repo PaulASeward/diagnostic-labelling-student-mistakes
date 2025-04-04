@@ -6,12 +6,16 @@ import json
 import struct
 from dimension_reduction import project_embeddings_to_reduced_dimension
 
-FEEDBACK_PATH = 'data/feedback.csv'
+FEEDBACK_PATH = 'data/mistake-data.csv'
 
 
 class TaskSelector:
-    def __init__(self, feedback_path=FEEDBACK_PATH):
+    def __init__(self, feedback_path=FEEDBACK_PATH, generate_category_hints=False, generate_embeddings=False):
+        if feedback_path is None:
+            feedback_path = FEEDBACK_PATH
         self.feedback_path = feedback_path
+        self.generate_category_hints = generate_category_hints
+        self.generate_embeddings = generate_embeddings
         self.df_feedback = pd.read_csv(feedback_path)
         # self.selected_df = pd.read_csv(feedback_path)
         self.course_mapping = self._create_mapping('course_id', 'course_name')
@@ -94,6 +98,10 @@ class TaskSelector:
         if self.selections['course'] and self.selections['assignment'] and self.selections['tasks']:
             print("Selected course, assignment, and tasks: ", self.selections['course'], self.selections['assignment'], self.selections['tasks'])
             self.load_task()
+            if self.generate_category_hints:
+                self.on_category_hint_generation()
+            if self.generate_embeddings:
+                self.on_embedding_request()
             # self.on_category_hint_generation()
             # self.on_embedding_request()
             self.expand_df()
@@ -101,13 +109,17 @@ class TaskSelector:
 
     def update_table(self, current_selection_indices, task_embeddings_df):
         filtered_df = task_embeddings_df[task_embeddings_df.apply(
-            lambda row: (row['student_id'], row['category_hint_idx']) in current_selection_indices, axis=1)]
-        filtered_df['formatted_grade'] = filtered_df.apply(lambda row: f"[{(row['grade'] * 100):.2f}%](https://app.stemble.com/courses/{row['course_id']}/assignments/{row['assignment_id']}/marking/{row['student_id']}/tasks/{row['task_id']})", axis=1)
+            lambda row: (row['user_id'], row['category_hint_idx']) in current_selection_indices, axis=1)]
+        filtered_df['formatted_grade'] = filtered_df.apply(lambda row: f"[{(row['grade'] * 100):.2f}%](https://app.stemble.com/courses/{row['course_id']}/assignments/{row['assignment_id']}/marking/{row['user_id']}/tasks/{row['task_id']})", axis=1)
         filtered2_df = filtered_df[['mistake_category_name', 'category_hint', 'ta_feedback_text', 'category_hints', 'formatted_grade']]
         data_to_display = filtered2_df.to_dict('records')
         return data_to_display
 
     def on_category_hint_generation(self):
+        # Check if 'ta_feedback_text' column exists
+        if 'ta_feedback_text' not in self.df_feedback.columns:
+            raise ValueError("The DataFrame does not contain the 'ta_feedback_text' column to generate category hints from.")
+
         if not self.selected_df.empty:
             missing_category_hint = self.selected_df['category_hints'].isna()
             if missing_category_hint.any():
@@ -208,33 +220,50 @@ class TaskSelector:
 
 def transform_data(input_path, output_path):
     df = pd.read_csv(input_path)
-    df['ta_feedback_text'] = pd.NA
-    df['category_hints'] = pd.NA
-    df['category_hint_1'] = pd.NA
-    df['category_hint_2'] = pd.NA
-    df['category_hint_3'] = pd.NA
-    df['category_hint_1_embedding'] = pd.NA
-    df['category_hint_2_embedding'] = pd.NA
-    df['category_hint_3_embedding'] = pd.NA
-    df['category_hint_idx'] = pd.NA
+    # df['ta_feedback_text'] = pd.NA
+    # df['category_hints'] = pd.NA
+    # df['category_hint_1'] = pd.NA
+    # df['category_hint_2'] = pd.NA
+    # df['category_hint_3'] = pd.NA
+    # df['category_hint_1_embedding'] = pd.NA
+    # df['category_hint_2_embedding'] = pd.NA
+    # df['category_hint_3_embedding'] = pd.NA
+    # df['category_hint_idx'] = pd.NA
 
-    valid_rows = ~df['mistake_label'].str.contains(
+
+
+    valid_rows = ~df['category_hints'].str.contains(
         r'No Mistake|3\. No Mistakes|No Mistakes|No mistakes|No mistake|N/A|None',
         case=False, na=False
     )
     df = df[valid_rows]
 
+    # Check if 'mistake_label' column exists
+    uses_old_mistake_label_column = 'mistake_label' in df.columns
+    has_feedback_data_column = 'feedback_data' in df.columns
+    if has_feedback_data_column:
+        df['ta_feedback_text'] = pd.NA
+
     # Iterate over the grouped DataFrame
-    for (course_id, assignment_id, task_id, student_id), student_grades_group in tqdm(
-            df.groupby(['course_id', 'assignment_id', 'task_id', 'student_id'])):
+    for (course_id, assignment_id, task_id, user_id), student_grades_group in tqdm(
+            df.groupby(['course_id', 'assignment_id', 'task_id', 'user_id'])):
         for idx in student_grades_group.index:
             # Save the mistake label into category_hints and category_hint_1
-            mistake_label = df.at[idx, 'mistake_label']
-            df.at[idx, 'category_hints'] = mistake_label
-            df.at[idx, 'category_hint_1'] = mistake_label
+            if uses_old_mistake_label_column:
+                mistake_label = df.at[idx, 'mistake_label']
+                df.at[idx, 'category_hints'] = mistake_label
+
+            # Clean the category hints into category_hint_1, category_hint_2, and category_hint_3
+            category_hints = df.at[idx, 'category_hints']
+            if pd.isna(category_hints):
+                continue
+
+            cleaned_hints = clean_category_hints(category_hints)
+            for i, hint in enumerate(cleaned_hints):
+                df.at[idx, f'category_hint_{i + 1}'] = hint
 
             # Unpack binary string representation of the embedding and save to category_hint_1_embedding
-            embedding = df.at[idx, 'embedding']
+            embedding = df.at[idx, 'category_hint_1_embedding']
             if pd.notna(embedding):
                 try:
                     # Convert the hexadecimal string to bytes
@@ -253,13 +282,14 @@ def transform_data(input_path, output_path):
                     print(f"Error processing embedding at index {idx}: {e}")
 
             # Extract TA feedback text from feedback_data JSON object
-            feedback_data = df.at[idx, 'feedback_data']
-            if pd.notna(feedback_data):
-                try:
-                    feedback_text = json.loads(feedback_data).get('feedback', None)
-                    df.at[idx, 'ta_feedback_text'] = feedback_text
-                except json.JSONDecodeError:
-                    pass
+            if has_feedback_data_column:
+                feedback_data = df.at[idx, 'feedback_data']
+                if pd.notna(feedback_data):
+                    try:
+                        feedback_text = json.loads(feedback_data).get('feedback', None)
+                        df.at[idx, 'ta_feedback_text'] = feedback_text
+                    except json.JSONDecodeError:
+                        pass
 
     df = df.drop(columns=['mistake_label', 'feedback_data', 'embedding'], errors='ignore')
     df.to_csv(output_path, index=False)

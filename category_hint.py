@@ -47,3 +47,8 @@ def generate_category_hint(feedback):
 
     hints = response.choices[0].message.content
     return hints
+
+
+
+if __name__ == "__main__":
+    transform_data(FEEDBACK_PATH, FEEDBACK_PATH)
