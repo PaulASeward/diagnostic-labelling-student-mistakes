@@ -5,12 +5,12 @@ from openai_utils.openai_request import *
 from openai_utils.openai_config import OpenAiOptions
 
 
-def calculate_embedding(feedback, options=OpenAiOptions(model='text-embedding-3-small', max_tokens=300)):
+def calculate_embedding(feedback, options=OpenAiOptions(model='text-embedding-3-small')):
     if (isinstance(feedback, str) and feedback == '') or pd.isna(feedback):
         embedding = pd.NA
     else:
         try:
-            embedding = generate_embeddings(feedback, options, dimensions=600)
+            embedding = generate_embeddings(feedback, options, dimensions=256)
         except Exception as e:
             print(f"An error occurred while generating embeddings: {e}")
             embedding = pd.NA
@@ -27,7 +27,7 @@ def get_processed_embeddings(task_df, embedding_column):
     return filtered_task_df, embedding_array
 
 
-def generate_embeddings(text, options: OpenAiOptions, dimensions=None):
+def generate_embeddings(text, options: OpenAiOptions, dimensions=256):
     """
     Generate embeddings from OpenAI API with the given text and options.
     :param text: OpenAI text to generate embeddings.
@@ -41,8 +41,8 @@ def generate_embeddings(text, options: OpenAiOptions, dimensions=None):
 
     text = text.replace("\n", " ")
 
-    embedding = client.embeddings.create(input=[text], model=options.model, dimensions=256).data[0].embedding
+    embedding = client.embeddings.create(input=[text], model=options.model, dimensions=dimensions).data[0].embedding
 
-    if dimensions is not None:
-        return embedding[:dimensions]
+    # if dimensions is not None:
+    #     return embedding[:dimensions]
     return embedding

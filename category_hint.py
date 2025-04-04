@@ -42,7 +42,7 @@ def clean_category_hints(category_hints):
 
 def generate_category_hint(feedback):
     prompt = build_category_hint_prompt(feedback)
-    options = OpenAiOptions(model='gpt-3.5-turbo', max_tokens=500)
+    options = OpenAiOptions(model='gpt-4o', max_tokens=500)
     response = call_openai(prompt=prompt, options=options)
 
     hints = response.choices[0].message.content

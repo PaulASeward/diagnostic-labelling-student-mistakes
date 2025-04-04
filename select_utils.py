@@ -2,6 +2,8 @@ from clustering_utils import *
 from embeddings import *
 from category_hint import *
 from tqdm import tqdm
+import json
+import struct
 from dimension_reduction import project_embeddings_to_reduced_dimension
 
 FEEDBACK_PATH = 'data/feedback.csv'
@@ -11,6 +13,7 @@ class TaskSelector:
     def __init__(self, feedback_path=FEEDBACK_PATH):
         self.feedback_path = feedback_path
         self.df_feedback = pd.read_csv(feedback_path)
+        # self.selected_df = pd.read_csv(feedback_path)
         self.course_mapping = self._create_mapping('course_id', 'course_name')
         self.assignment_mapping = self._create_mapping('assignment_id', 'assignment_name')
         self.task_mapping = self._create_mapping('task_id', 'task_title')
@@ -37,6 +40,29 @@ class TaskSelector:
         if changes_made:
             self.df_feedback.to_csv(FEEDBACK_PATH, index=False)
 
+    # def perturb_and_duplicate(self):
+    #     self.selected_df = pd.concat([self.selected_df]*10, ignore_index=True)
+    #
+    #     def add_jitter(embedding, jitter_strength=0.01):
+    #         if pd.isna(embedding):
+    #             return embedding
+    #         try:
+    #             # Parse the string representation of the list
+    #             embedding_array = np.array(ast.literal_eval(embedding), dtype=float)
+    #             jitter = np.random.normal(0, jitter_strength, embedding_array.shape)
+    #             return list(embedding_array + jitter)
+    #         except (ValueError, SyntaxError) as e:
+    #             print(f"Error processing embedding: {embedding}, error: {e}")
+    #             return embedding
+    #
+    #         # Apply the jitter function to each embedding column
+    #
+    #     embedding_columns = ['category_hint_1_embedding', 'category_hint_2_embedding', 'category_hint_3_embedding']
+    #     for col in embedding_columns:
+    #         self.selected_df[col] = self.selected_df[col].apply(lambda x: add_jitter(x))
+    #
+    #     self.selected_df.to_csv(FEEDBACK_PATH, index=False)
+
     def _create_mapping(self, id_column, title_column):
         """Create a mapping from id to title for dropdown options."""
         return self.df_feedback[[id_column, title_column]].drop_duplicates().set_index(id_column)[title_column].to_dict()
@@ -62,20 +88,21 @@ class TaskSelector:
 
     def load_task(self):
         self.selected_df = self.df_feedback[(self.df_feedback['course_id'] == self.selections['course']) & (self.df_feedback['assignment_id'] == self.selections['assignment']) & (self.df_feedback['task_id'].isin(self.selections['tasks']))]
+        # # self.selected_df.to_csv('data/selected_task.csv', index=False)  # Save the selected task data to a new CSV file
 
     def on_task_selection(self):
         if self.selections['course'] and self.selections['assignment'] and self.selections['tasks']:
             print("Selected course, assignment, and tasks: ", self.selections['course'], self.selections['assignment'], self.selections['tasks'])
             self.load_task()
-            self.on_category_hint_generation()
-            self.on_embedding_request()
+            # self.on_category_hint_generation()
+            # self.on_embedding_request()
             self.expand_df()
         return None
 
     def update_table(self, current_selection_indices, task_embeddings_df):
         filtered_df = task_embeddings_df[task_embeddings_df.apply(
             lambda row: (row['student_id'], row['category_hint_idx']) in current_selection_indices, axis=1)]
-        filtered_df['formatted_grade'] = filtered_df.apply(lambda row: f"[{(row['grade'] * 100):.2f}%](https://app.stemble.ca/web/courses/{row['course_id']}/assignments/{row['assignment_id']}/marking/{row['student_id']}/tasks/{row['task_id']})", axis=1)
+        filtered_df['formatted_grade'] = filtered_df.apply(lambda row: f"[{(row['grade'] * 100):.2f}%](https://app.stemble.com/courses/{row['course_id']}/assignments/{row['assignment_id']}/marking/{row['student_id']}/tasks/{row['task_id']})", axis=1)
         filtered2_df = filtered_df[['mistake_category_name', 'category_hint', 'ta_feedback_text', 'category_hints', 'formatted_grade']]
         data_to_display = filtered2_df.to_dict('records')
         return data_to_display
@@ -119,7 +146,8 @@ class TaskSelector:
 
                 # Define the conditions
                 condition_text_not_na = ~self.selected_df[text_column].isna()
-                condition_text_valid = ~self.selected_df[text_column].isin(["No Mistake", "No Mistakes", "No mistakes", "No mistake", "N/A", "None"])
+                # condition_text_valid = ~self.selected_df[text_column].isin(["No Mistake", "3. No Mistakes", "No Mistakes", "No mistakes", "No mistake", "N/A", "None"])
+                condition_text_valid = ~self.selected_df[text_column].isin(["No Feedback", "3. No Feedback", "No Feedbacks", "No feedbacks", "No feedback", "N/A", "None"])
                 condition_embedding_na = self.selected_df[embedding_column].isna()
                 missing_embeddings = condition_text_not_na & condition_text_valid & condition_embedding_na
 
@@ -178,10 +206,71 @@ class TaskSelector:
             self.df_with_category_embeddings.sort_values(by='mistake_category_label', inplace=True)
 
 
+def transform_data(input_path, output_path):
+    df = pd.read_csv(input_path)
+    df['ta_feedback_text'] = pd.NA
+    df['category_hints'] = pd.NA
+    df['category_hint_1'] = pd.NA
+    df['category_hint_2'] = pd.NA
+    df['category_hint_3'] = pd.NA
+    df['category_hint_1_embedding'] = pd.NA
+    df['category_hint_2_embedding'] = pd.NA
+    df['category_hint_3_embedding'] = pd.NA
+    df['category_hint_idx'] = pd.NA
+
+    valid_rows = ~df['mistake_label'].str.contains(
+        r'No Mistake|3\. No Mistakes|No Mistakes|No mistakes|No mistake|N/A|None',
+        case=False, na=False
+    )
+    df = df[valid_rows]
+
+    # Iterate over the grouped DataFrame
+    for (course_id, assignment_id, task_id, student_id), student_grades_group in tqdm(
+            df.groupby(['course_id', 'assignment_id', 'task_id', 'student_id'])):
+        for idx in student_grades_group.index:
+            # Save the mistake label into category_hints and category_hint_1
+            mistake_label = df.at[idx, 'mistake_label']
+            df.at[idx, 'category_hints'] = mistake_label
+            df.at[idx, 'category_hint_1'] = mistake_label
+
+            # Unpack binary string representation of the embedding and save to category_hint_1_embedding
+            embedding = df.at[idx, 'embedding']
+            if pd.notna(embedding):
+                try:
+                    # Convert the hexadecimal string to bytes
+                    if isinstance(embedding, str):
+                        embedding_bytes = bytes.fromhex(embedding[2:])  # Skip "0x" prefix
+                    else:
+                        embedding_bytes = embedding
+
+                    # Ensure the length matches the expected size (1024 bytes)
+                    if len(embedding_bytes) == 1024:
+                        embedding_list = struct.unpack(f'{256}f', embedding_bytes)
+                        df.at[idx, 'category_hint_1_embedding'] = list(embedding_list)
+                    else:
+                        raise ValueError(f"Unexpected embedding size: {len(embedding_bytes)} bytes")
+                except (struct.error, ValueError) as e:
+                    print(f"Error processing embedding at index {idx}: {e}")
+
+            # Extract TA feedback text from feedback_data JSON object
+            feedback_data = df.at[idx, 'feedback_data']
+            if pd.notna(feedback_data):
+                try:
+                    feedback_text = json.loads(feedback_data).get('feedback', None)
+                    df.at[idx, 'ta_feedback_text'] = feedback_text
+                except json.JSONDecodeError:
+                    pass
+
+    df = df.drop(columns=['mistake_label', 'feedback_data', 'embedding'], errors='ignore')
+    df.to_csv(output_path, index=False)
+
+
+# transform_data(FEEDBACK_PATH, OUTPUT_PATH)
 # ts = TaskSelector()
 # ts.selections['course'] = 879
 # ts.selections['assignment'] = 1539
-# ts.selections['tasks'] = [1128]
+# # ts.selections['tasks'] = [1119]
+# ts.selections['tasks'] = [1119, 1120, 1121, 1122, 1123, 1125, 1128, 1127]
 # ts.on_task_selection()
 # ts.on_clustering_request()
 

@@ -159,7 +159,4 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-/ta-override-visualization/data/joined_feedback.csv
-/ta-override-visualization/data/feedback_differential_table.csv
-
-ta-override-visualization/data/joined_feedback.csv
+data/*
