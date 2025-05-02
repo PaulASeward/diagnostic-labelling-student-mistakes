@@ -53,7 +53,7 @@ This project is a Dash web application designed to visualize the corrections mad
 Before running the application clean the data by running the command:
     
 ```bash
-python3 -m ta_feedback_analysis.build_ta_overrides_table.py
+python3 -m ta_feedback_analysis.build_ta_overrides_table
 ```
 
 ## Running the Application

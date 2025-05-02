@@ -34,3 +34,25 @@ def add_embeddings(feedback_diff):
         return pd.NA
     else:
         return calculate_embedding(feedback_diff)
+
+def generate_embeddings(text, options: OpenAiOptions, dimensions=256):
+    """
+    Generate embeddings from OpenAI API with the given text and options.
+    :param text: OpenAI text to generate embeddings.
+    :param options: OpenAiOptions
+    :param dimensions: The number of dimensions to return.
+
+    :return: The embedding from OpenAI API.
+    """
+    load_openai_env()
+
+    config = OpenAiConfig()
+    client = OpenAI(api_key=config.api_key, organization=config.organization)
+
+    text = text.replace("\n", " ")
+
+    embedding = client.embeddings.create(input=[text], model=options.model, dimensions=dimensions).data[0].embedding
+
+    # if dimensions is not None:
+    #     return embedding[:dimensions]
+    return embedding

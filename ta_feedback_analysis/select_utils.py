@@ -15,6 +15,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 FEEDBACK_PATH = os.path.join(DATA_DIR, TA_FEEDBACK_DATA_NAME)
 
+
 AI_FEEDBACK_DATA_PATH = os.path.join(DATA_DIR, AI_FEEDBACK_DATA_NAME)
 TA_OVERRIDES_DATA_PATH = os.path.join(DATA_DIR, TA_OVERRIDES_DATA_NAME)
 JOINED_FEEDBACK_PATH = os.path.join(DATA_DIR, JOINED_FEEDBACK_PATH)
@@ -28,7 +29,7 @@ JOINED_FEEDBACK_PATH = os.path.join(DATA_DIR, JOINED_FEEDBACK_PATH)
 class TaskSelector:
     def __init__(self, path_to_feedback_diff_data=FEEDBACK_PATH):
         self.df_diff = pd.read_csv(path_to_feedback_diff_data)
-        self.df_joined = pd.read_csv(path_to_feedback_diff_data)  # Load the larger DataFrame for mappings
+        self.df_joined = pd.read_csv(JOINED_FEEDBACK_PATH)  # Load the larger DataFrame for mappings
         self.course_mapping = self._create_mapping('course_id', 'course_name')
         self.assignment_mapping = self._create_mapping('assignment_id', 'assignment_name')
         self.task_mapping = self._create_mapping('task_id', 'task_title')
