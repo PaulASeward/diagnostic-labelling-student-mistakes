@@ -4,10 +4,10 @@ from dash import dcc, html, Input, Output, callback, State
 from dash import callback_context, dash_table
 from dash.exceptions import PreventUpdate
 
-from select_utils import TaskSelector
-from dimension_reduction import available_dimension_reduction_techniques
-from clustering_utils import available_clustering_techniques
-from plot_utils import *
+from mistake_label_classification.select_utils import TaskSelector
+from mistake_label_classification.dimension_reduction import available_dimension_reduction_techniques
+from mistake_label_classification.clustering_utils import available_clustering_techniques
+from mistake_label_classification.plot_utils import *
 
 # Initialize the Dash app
 app = dash.Dash(__name__)

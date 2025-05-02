@@ -59,6 +59,27 @@ def generate_chat_response(prompt, options: OpenAiOptions, retry=False):
 
     return response
 
+def generate_embeddings(text, options: OpenAiOptions, dimensions=256):
+    """
+    Generate embeddings from OpenAI API with the given text and options.
+    :param text: OpenAI text to generate embeddings.
+    :param options: OpenAiOptions
+    :param dimensions: The number of dimensions to return.
+
+    :return: The embedding from OpenAI API.
+    """
+    config = OpenAiConfig()
+    client = OpenAI(api_key=config.api_key, organization=config.organization)
+
+    text = text.replace("\n", " ")
+
+    embedding = client.embeddings.create(input=[text], model=options.model, dimensions=dimensions).data[0].embedding
+
+    # if dimensions is not None:
+    #     return embedding[:dimensions]
+    return embedding
+
+
 
 
 

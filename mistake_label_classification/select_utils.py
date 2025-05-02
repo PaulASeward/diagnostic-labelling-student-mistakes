@@ -1,13 +1,17 @@
-from clustering_utils import *
-from embeddings import *
-from category_hint import *
+from mistake_label_classification.clustering_utils import *
+from mistake_label_classification.embeddings import *
+from mistake_label_classification.category_hint import *
 from tqdm import tqdm
 import json
+import os
 import struct
-from dimension_reduction import project_embeddings_to_reduced_dimension
+from mistake_label_classification.dimension_reduction import project_embeddings_to_reduced_dimension
 
-FEEDBACK_PATH = 'data/mistake-data.csv'
 
+MISTAKE_DATA_NAME = 'mistake-data.csv'
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+FEEDBACK_PATH = os.path.join(DATA_DIR, MISTAKE_DATA_NAME)
 
 class TaskSelector:
     def __init__(self, feedback_path=FEEDBACK_PATH, generate_category_hints=False, generate_embeddings=False):
@@ -102,8 +106,6 @@ class TaskSelector:
                 self.on_category_hint_generation()
             if self.generate_embeddings:
                 self.on_embedding_request()
-            # self.on_category_hint_generation()
-            # self.on_embedding_request()
             self.expand_df()
         return None
 
@@ -220,17 +222,6 @@ class TaskSelector:
 
 def transform_data(input_path, output_path):
     df = pd.read_csv(input_path)
-    # df['ta_feedback_text'] = pd.NA
-    # df['category_hints'] = pd.NA
-    # df['category_hint_1'] = pd.NA
-    # df['category_hint_2'] = pd.NA
-    # df['category_hint_3'] = pd.NA
-    # df['category_hint_1_embedding'] = pd.NA
-    # df['category_hint_2_embedding'] = pd.NA
-    # df['category_hint_3_embedding'] = pd.NA
-    # df['category_hint_idx'] = pd.NA
-
-
 
     valid_rows = ~df['category_hints'].str.contains(
         r'No Mistake|3\. No Mistakes|No Mistakes|No mistakes|No mistake|N/A|None',

@@ -1,8 +1,8 @@
-from category_hint import *
+from mistake_label_classification.category_hint import *
 from tqdm import tqdm
 import json
 import struct
-from select_utils import FEEDBACK_PATH
+from mistake_label_classification.select_utils import FEEDBACK_PATH
 
 
 def transform_data(input_path, output_path):
@@ -86,3 +86,4 @@ if __name__ == "__main__":
     transform_data(FEEDBACK_PATH, FEEDBACK_PATH)
 
 
+# transform_data(FEEDBACK_PATH, FEEDBACK_PATH)
