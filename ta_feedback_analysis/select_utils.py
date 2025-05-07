@@ -8,9 +8,10 @@ import json
 
 AI_FEEDBACK_DATA_NAME = 'ai-feedback.csv'
 TA_OVERRIDES_DATA_NAME = 'ta-overrides.csv'
-JOINED_FEEDBACK_PATH = 'joined_feedback.csv'
+JOINED_FEEDBACK_PATH = 'joined_feedback2.csv'
 
-TA_FEEDBACK_DATA_NAME = 'ta-feedback-data.csv'
+# TA_FEEDBACK_DATA_NAME = 'ta-feedback-data.csv'
+TA_FEEDBACK_DATA_NAME = 'ta-feedback-data2.csv'
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 FEEDBACK_PATH = os.path.join(DATA_DIR, TA_FEEDBACK_DATA_NAME)
@@ -30,6 +31,10 @@ class TaskSelector:
     def __init__(self, path_to_feedback_diff_data=FEEDBACK_PATH):
         self.df_diff = pd.read_csv(path_to_feedback_diff_data)
         self.df_joined = pd.read_csv(JOINED_FEEDBACK_PATH)  # Load the larger DataFrame for mappings
+        # Remove any instances of df_joined with NaN values in the course_id, assignment_id, or task_id columns
+        self.df_joined.dropna(subset=['course_name'], inplace=True)
+
+
         self.course_mapping = self._create_mapping('course_id', 'course_name')
         self.assignment_mapping = self._create_mapping('assignment_id', 'assignment_name')
         self.task_mapping = self._create_mapping('task_id', 'task_title')

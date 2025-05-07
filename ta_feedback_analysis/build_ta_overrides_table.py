@@ -12,7 +12,7 @@ class AiTaFeedbackJoiner:
     def __init__(self, ai_feedback_path=AI_FEEDBACK_DATA_PATH, ta_feedback_path=TA_OVERRIDES_DATA_PATH,
                  joined_feedback_path=JOINED_FEEDBACK_PATH, feedback_differential_path=FEEDBACK_PATH,
                  selected_courses=None, selected_assignments=None, selected_tasks=None, selected_parts=None,
-                 build_new=False):
+                 build_new=True):
 
         self.ai_feedback_path = ai_feedback_path
         self.ta_feedback_path = ta_feedback_path
@@ -120,6 +120,13 @@ class AiTaFeedbackJoiner:
                     # diff_data = pd.concat([diff_data, new_row_df], ignore_index=True)
                 except Exception as e:
                     print(f"Error processing task {task_id} for student {student_id}: {e}")
+
+        # Remove any instances of null or empty course id or names
+        df = pd.read_csv(self.feedback_differential_path)
+        df = df[(df['course_id'].notnull()) & (df['course_name'].notnull())]
+        df = df[(df['course_id'] != '') & (df['course_name'] != '')]
+        df.to_csv(self.feedback_differential_path, index=False)
+
 
         # if self.build_new or not os.path.exists(self.feedback_differential_path):  # Building new feedback differential table
         #     diff_data.to_csv(self.feedback_differential_path, index=False)
